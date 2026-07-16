@@ -1,0 +1,20 @@
+@import "tailwindcss";
+@config "../tailwind.config.js";
+
+@layer base {
+  body {
+    @apply bg-spiritual-cream text-gray-800 antialiased;
+  }
+}
+
+.glass-card {
+  @apply bg-white/80 backdrop-blur-md border border-white/20 shadow-elegant rounded-xl;
+}
+
+.nav-link {
+  @apply flex items-center gap-3 px-4 py-3 rounded-lg text-gray-600 hover:bg-saffron-50 hover:text-saffron-600 transition-colors font-medium;
+}
+
+.nav-link.active {
+  @apply bg-saffron-500 text-white shadow-md shadow-saffron-500/20;
+}
