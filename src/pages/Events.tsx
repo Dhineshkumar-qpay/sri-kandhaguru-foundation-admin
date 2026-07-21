@@ -201,7 +201,7 @@ export default function Events() {
         </div>
         <button
           onClick={() => setShowForm(true)}
-          className="bg-saffron-500 hover:bg-saffron-600 text-white px-6 py-2.5 rounded-xl font-medium flex items-center gap-2 shadow-lg shadow-saffron-500/30 transition-all active:scale-95"
+          className="bg-saffron-500 hover:bg-saffron-600 text-white px-6 py-2.5 rounded-xl font-medium flex items-center gap-2 shadow-lg shadow-saffron-500/30 transition-all active:scale-95 cursor-pointer"
         >
           <Plus className="w-5 h-5" />
           Create New Event
@@ -342,52 +342,53 @@ export default function Events() {
                 </select>
               </div>
 
-              <div className="xl:col-span-3 grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Venue Name *
-                  </label>
-                  <input
-                    name="venuename"
-                    required
-                    type="text"
-                    className="w-full px-4 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-saffron-500/50"
-                    placeholder="e.g. VGP Convention Hall"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Address *
-                  </label>
-                  <input
-                    name="address"
-                    required
-                    type="text"
-                    className="w-full px-4 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-saffron-500/50"
-                    placeholder="e.g. East Coast Road"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    City & State *
-                  </label>
-                  <div className="grid grid-cols-2 gap-2">
-                    <input
-                      name="city"
-                      required
-                      type="text"
-                      className="w-full px-4 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-saffron-500/50"
-                      placeholder="City"
-                    />
-                    <input
-                      name="state"
-                      required
-                      type="text"
-                      className="w-full px-4 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-saffron-500/50"
-                      placeholder="State"
-                    />
-                  </div>
-                </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Venue Name *
+                </label>
+                <input
+                  name="venuename"
+                  required
+                  type="text"
+                  className="w-full px-4 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-saffron-500/50"
+                  placeholder="e.g. VGP Convention Hall"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Address *
+                </label>
+                <input
+                  name="address"
+                  required
+                  type="text"
+                  className="w-full px-4 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-saffron-500/50"
+                  placeholder="e.g. East Coast Road"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  City *
+                </label>
+                <input
+                  name="city"
+                  required
+                  type="text"
+                  className="w-full px-4 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-saffron-500/50"
+                  placeholder="City"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  State *
+                </label>
+                <input
+                  name="state"
+                  required
+                  type="text"
+                  className="w-full px-4 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-saffron-500/50"
+                  placeholder="State"
+                />
               </div>
 
               <div className="xl:col-span-3">
@@ -418,14 +419,14 @@ export default function Events() {
               <button
                 type="button"
                 onClick={() => setShowForm(false)}
-                className="px-6 py-2 border border-gray-200 text-gray-600 rounded-xl hover:bg-gray-50 font-medium"
+                className="px-6 py-2 border border-gray-200 text-gray-600 rounded-xl hover:bg-gray-50 font-medium cursor-pointer"
               >
                 Cancel
               </button>
               <button
                 type="submit"
                 disabled={loading}
-                className={`px-6 py-2 bg-saffron-500 text-white rounded-xl hover:bg-saffron-600 font-medium shadow-md shadow-saffron-500/20 ${loading ? "opacity-70 cursor-not-allowed" : ""}`}
+                className={`px-6 py-2 bg-saffron-500 text-white rounded-xl hover:bg-saffron-600 font-medium shadow-md shadow-saffron-500/20 cursor-pointer ${loading ? "opacity-70 cursor-not-allowed" : ""}`}
               >
                 {loading ? "Saving..." : "Save Event"}
               </button>
@@ -544,11 +545,20 @@ export default function Events() {
                         </div>
                       </td>
                       <td className="px-6 py-4 text-center">
-                        <div className="flex items-center justify-center cursor-pointer" onClick={() => toggleStatus(event.id, event.status)}>
-                          <div className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${event.status === 'active' ? 'bg-saffron-500' : 'bg-gray-300'}`}>
-                            <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${event.status === 'active' ? 'translate-x-6' : 'translate-x-1'}`} />
+                        <div
+                          className="flex items-center justify-center cursor-pointer"
+                          onClick={() => toggleStatus(event.id, event.status)}
+                        >
+                          <div
+                            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${event.status === "active" ? "bg-saffron-500" : "bg-gray-300"}`}
+                          >
+                            <span
+                              className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${event.status === "active" ? "translate-x-6" : "translate-x-1"}`}
+                            />
                           </div>
-                          <span className={`ml-2 text-xs font-semibold capitalize ${event.status === 'active' ? 'text-saffron-600' : 'text-gray-500'}`}>
+                          <span
+                            className={`ml-2 text-xs font-semibold capitalize ${event.status === "active" ? "text-saffron-600" : "text-gray-500"}`}
+                          >
                             {event.status}
                           </span>
                         </div>

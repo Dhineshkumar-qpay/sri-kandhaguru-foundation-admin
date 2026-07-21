@@ -176,7 +176,7 @@ export default function Layout() {
               window.location.href = "/login";
             }}
             className={clsx(
-              "flex items-center gap-3 w-full px-3 py-3 rounded-xl transition-all duration-200 group text-red-500 hover:bg-red-50",
+              "flex items-center gap-3 w-full px-3 py-3 rounded-xl transition-all duration-200 group text-red-500 hover:bg-red-50 cursor-pointer",
               !sidebarOpen && !mobileMenuOpen && "justify-center",
             )}
             title={!sidebarOpen && !mobileMenuOpen ? "Logout" : undefined}

@@ -23,7 +23,7 @@ function App() {
     <BrowserRouter>
       <Routes>
         <Route path="/login" element={<Login onLogin={() => setIsAuthenticated(true)} />} />
-        
+
         <Route path="/" element={isAuthenticated ? <Layout /> : <Navigate to="/login" replace />}>
           <Route index element={<Navigate to="/dashboard" replace />} />
           <Route path="dashboard" element={<Dashboard />} />
