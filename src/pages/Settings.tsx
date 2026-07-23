@@ -23,7 +23,7 @@ export default function Settings() {
   const fetchProfile = async () => {
     setLoading(true);
     try {
-      const response = await api.post("/user/get");
+      const response = await api.post("/admin/get");
       if (response.data?.success) {
         setProfile(response.data.data);
       }

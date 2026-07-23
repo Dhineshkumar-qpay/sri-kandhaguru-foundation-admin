@@ -13,6 +13,7 @@ import Categories from './pages/Categories';
 import Contacts from './pages/Contacts';
 import Reviews from './pages/Reviews';
 import Bookings from './pages/Bookings';
+import Products from './pages/Products';
 
 function App() {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(() => {
@@ -37,6 +38,7 @@ function App() {
           <Route path="contacts" element={<Contacts />} />
           <Route path="reviews" element={<Reviews />} />
           <Route path="settings" element={<Settings />} />
+          <Route path="products" element={<Products />} />
           <Route path="*" element={<Navigate to="/dashboard" replace />} />
         </Route>
       </Routes>

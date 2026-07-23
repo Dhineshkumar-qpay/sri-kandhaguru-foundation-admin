@@ -14,6 +14,7 @@ import {
   X,
   Power,
   PowerOff,
+  IndianRupee,
 } from "lucide-react";
 import { motion } from "framer-motion";
 import api from "../services/api";
@@ -22,13 +23,34 @@ interface Event {
   id: number;
   image: string;
   title: string;
+  description?: string;
+  category?: string;
   eventdate: string;
+  starttime?: string;
+  endtime?: string;
   address: string;
-  partcipants: number;
+  participants: number;
+  registrationfee?: number;
+  venuename?: string;
   city: string;
   state: string;
+  maplink?: string;
   eventtype: string;
   status: string;
+  instructions?: string;
+  deliverymode?: string;
+  programtype?: string;
+  duration?: string;
+  benefits?: string[];
+  eligibility?: string;
+  dresscode?: string;
+  thingstobring?: string[];
+  registrationlastdate?: string;
+  createdAt?: string;
+  registrationactive?: boolean;
+  agenda?: { starttime: string; endtime: string; title: string }[];
+  leveltype?: string;
+  eventtodate?: string;
 }
 
 interface PaginationMeta {
@@ -58,6 +80,14 @@ const getEventStatusColor = (type: string) => {
 export default function Events() {
   const [searchTerm, setSearchTerm] = useState("");
   const [showForm, setShowForm] = useState(false);
+  const [editingEvent, setEditingEvent] = useState<Event | null>(null);
+  const [deliveryMode, setDeliveryMode] = useState("offline");
+  const [levelType, setLevelType] = useState("level1");
+  const [schedules, setSchedules] = useState([
+    { starttime: "", endtime: "", title: "" },
+  ]);
+  const [benefits, setBenefits] = useState<string[]>([""]);
+  const [thingsToBring, setThingsToBring] = useState<string[]>([""]);
   const [events, setEvents] = useState<Event[]>([]);
   const [meta, setMeta] = useState<PaginationMeta | null>(null);
   const [loading, setLoading] = useState(false);
@@ -159,27 +189,58 @@ export default function Events() {
       }
 
       // 2. Add Event
-      const eventPayload = {
-        image: imageUrl,
+      const eventPayload: any = {
         title: formData.get("title"),
         description: formData.get("description"),
         category: formData.get("category"),
-        eventdate: formData.get("eventdate"),
-        starttime: formData.get("starttime"),
-        endtime: formData.get("endtime"),
-        partcipants: Number(formData.get("partcipants")),
-        registrationfee: Number(formData.get("registrationfee")),
-        venuename: formData.get("venuename"),
-        address: formData.get("address"),
-        city: formData.get("city"),
-        state: formData.get("state"),
-        maplink: formData.get("maplink"),
+        eventdate: formData.get("eventdate") || "",
+        eventtodate: formData.get("eventtodate") || "",
+        starttime: formData.get("starttime") || "",
+        endtime: formData.get("endtime") || "",
+        participants:
+          Number(formData.get("participants")) ||
+          Number(formData.get("partcipants")) ||
+          0,
+        registrationfee: Number(formData.get("registrationfee")) || 0,
+        venuename: formData.get("venuename") || "",
+        address: formData.get("address") || "",
+        city: formData.get("city") || "",
+        state: formData.get("state") || "",
+        maplink: formData.get("maplink") || "",
         eventtype: formData.get("eventtype"),
+        instructions: formData.get("instructions"),
+        deliverymode: formData.get("deliverymode"),
+        leveltype: formData.get("leveltype"),
+        agenda: schedules,
+        programtype: formData.get("programtype"),
+        duration: formData.get("duration"),
+        benefits: benefits.filter((b) => b.trim() !== ""),
+        eligibility: formData.get("eligibility"),
+        dresscode: formData.get("dresscode"),
+        thingstobring: thingsToBring.filter((t) => t.trim() !== ""),
+        registrationlastdate: formData.get("registrationlastdate") || "",
+        registrationactive: formData.get("registrationactive") === "on",
       };
 
-      const addRes = await api.post("/event/add", eventPayload);
+      if (editingEvent) {
+        eventPayload.id = editingEvent.id;
+        if (!imageUrl && editingEvent.image) {
+          eventPayload.existingimage = editingEvent.image;
+        } else {
+          eventPayload.image = imageUrl;
+        }
+      } else {
+        eventPayload.image = imageUrl;
+      }
+
+      const endpoint = editingEvent ? "/event/edit" : "/event/add";
+      const addRes = await api.post(endpoint, eventPayload);
       if (addRes.data?.success) {
         setShowForm(false);
+        setEditingEvent(null);
+        setSchedules([{ starttime: "", endtime: "", title: "" }]);
+        setBenefits([""]);
+        setThingsToBring([""]);
         setCurrentPage(1);
         fetchEvents(1);
       }
@@ -200,7 +261,15 @@ export default function Events() {
           </p>
         </div>
         <button
-          onClick={() => setShowForm(true)}
+          onClick={() => {
+            setEditingEvent(null);
+            setDeliveryMode("offline");
+            setLevelType("level1");
+            setSchedules([{ starttime: "", endtime: "", title: "" }]);
+            setBenefits([""]);
+            setThingsToBring([""]);
+            setShowForm(true);
+          }}
           className="bg-saffron-500 hover:bg-saffron-600 text-white px-6 py-2.5 rounded-xl font-medium flex items-center gap-2 shadow-lg shadow-saffron-500/30 transition-all active:scale-95 cursor-pointer"
         >
           <Plus className="w-5 h-5" />
@@ -216,17 +285,55 @@ export default function Events() {
         >
           <div className="flex justify-between items-center mb-6">
             <h2 className="text-xl font-bold text-gray-800">
-              Create New Event
+              {editingEvent ? "Edit Event" : "Create New Event"}
             </h2>
             <button
-              onClick={() => setShowForm(false)}
-              className="text-gray-400 hover:text-gray-600"
+              onClick={() => {
+                setShowForm(false);
+                setEditingEvent(null);
+                setDeliveryMode("offline");
+                setLevelType("level1");
+                setSchedules([{ starttime: "", endtime: "", title: "" }]);
+                setBenefits([""]);
+                setThingsToBring([""]);
+              }}
+              className="text-gray-400 hover:text-gray-600 cursor-pointer"
             >
               <X className="w-6 h-6" />
             </button>
           </div>
           <form className="space-y-4" onSubmit={handleCreateEvent}>
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+              <div className="xl:col-span-3">
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Level Type *
+                </label>
+                <select
+                  name="leveltype"
+                  value={levelType}
+                  onChange={(e) => setLevelType(e.target.value)}
+                  required
+                  className="w-full px-4 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-saffron-500/50 bg-white"
+                >
+                  <option value="level1">Level 1</option>
+                  <option value="level2">Level 2</option>
+                </select>
+              </div>
+              <div className="xl:col-span-3">
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Delivery Mode *
+                </label>
+                <select
+                  name="deliverymode"
+                  value={deliveryMode}
+                  onChange={(e) => setDeliveryMode(e.target.value)}
+                  required
+                  className="w-full px-4 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-saffron-500/50 bg-white"
+                >
+                  <option value="offline">Offline</option>
+                  <option value="online">Online</option>
+                </select>
+              </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Event Image
@@ -244,6 +351,7 @@ export default function Events() {
                 </label>
                 <input
                   name="title"
+                  defaultValue={editingEvent?.title || ""}
                   required
                   type="text"
                   className="w-full px-4 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-saffron-500/50"
@@ -257,6 +365,7 @@ export default function Events() {
                 </label>
                 <input
                   name="category"
+                  defaultValue={editingEvent?.category || ""}
                   required
                   type="text"
                   className="w-full px-4 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-saffron-500/50"
@@ -265,59 +374,116 @@ export default function Events() {
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Date *
+                  Program Type *
                 </label>
-                <input
-                  name="eventdate"
+                <select
+                  name="programtype"
+                  defaultValue={editingEvent?.programtype || ""}
                   required
-                  type="date"
-                  className="w-full px-4 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-saffron-500/50"
-                />
+                  className="w-full px-4 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-saffron-500/50 bg-white"
+                >
+                  <option value="domestic">Domestic</option>
+                  <option value="international">International</option>
+                </select>
               </div>
-              <div className="grid grid-cols-2 gap-2">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Start Time *
-                  </label>
-                  <input
-                    name="starttime"
-                    required
-                    type="time"
-                    className="w-full px-4 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-saffron-500/50"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    End Time *
-                  </label>
-                  <input
-                    name="endtime"
-                    required
-                    type="time"
-                    className="w-full px-4 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-saffron-500/50"
-                  />
-                </div>
-              </div>
-
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Participants *
+                  Duration *
                 </label>
                 <input
-                  name="partcipants"
+                  name="duration"
+                  defaultValue={editingEvent?.duration || ""}
                   required
-                  type="number"
-                  min="0"
+                  type="text"
                   className="w-full px-4 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-saffron-500/50"
-                  placeholder="e.g. 1500"
+                  placeholder="e.g. 1 Day"
                 />
               </div>
+              {deliveryMode === "offline" && (
+                <>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Date *
+                    </label>
+                    <input
+                      name="eventdate"
+                      defaultValue={
+                        editingEvent?.eventdate
+                          ? editingEvent.eventdate.split("T")[0]
+                          : ""
+                      }
+                      required
+                      type="date"
+                      className="w-full px-4 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-saffron-500/50"
+                    />
+                  </div>
+                  {levelType === "level2" && (
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        To Date
+                      </label>
+                      <input
+                        name="eventtodate"
+                        defaultValue={
+                          editingEvent?.eventtodate
+                            ? editingEvent.eventtodate.split("T")[0]
+                            : ""
+                        }
+                        type="date"
+                        className="w-full px-4 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-saffron-500/50"
+                      />
+                    </div>
+                  )}
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Start Time *
+                      </label>
+                      <input
+                        name="starttime"
+                        defaultValue={editingEvent?.starttime || ""}
+                        required
+                        type="time"
+                        className="w-full px-4 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-saffron-500/50"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        End Time *
+                      </label>
+                      <input
+                        name="endtime"
+                        defaultValue={editingEvent?.endtime || ""}
+                        required
+                        type="time"
+                        className="w-full px-4 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-saffron-500/50"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Participants *
+                    </label>
+                    <input
+                      name="participants"
+                      defaultValue={editingEvent?.participants || ""}
+                      required
+                      type="number"
+                      min="0"
+                      className="w-full px-4 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-saffron-500/50"
+                      placeholder="e.g. 1500"
+                    />
+                  </div>
+                </>
+              )}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Registration Fee *
                 </label>
                 <input
                   name="registrationfee"
+                  defaultValue={editingEvent?.registrationfee || ""}
                   required
                   type="number"
                   step="0.01"
@@ -332,6 +498,7 @@ export default function Events() {
                 </label>
                 <select
                   name="eventtype"
+                  defaultValue={editingEvent?.eventtype || ""}
                   required
                   className="w-full px-4 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-saffron-500/50 bg-white"
                 >
@@ -342,83 +509,358 @@ export default function Events() {
                 </select>
               </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Venue Name *
-                </label>
-                <input
-                  name="venuename"
-                  required
-                  type="text"
-                  className="w-full px-4 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-saffron-500/50"
-                  placeholder="e.g. VGP Convention Hall"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Address *
-                </label>
-                <input
-                  name="address"
-                  required
-                  type="text"
-                  className="w-full px-4 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-saffron-500/50"
-                  placeholder="e.g. East Coast Road"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  City *
-                </label>
-                <input
-                  name="city"
-                  required
-                  type="text"
-                  className="w-full px-4 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-saffron-500/50"
-                  placeholder="City"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  State *
-                </label>
-                <input
-                  name="state"
-                  required
-                  type="text"
-                  className="w-full px-4 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-saffron-500/50"
-                  placeholder="State"
-                />
+              {deliveryMode === "offline" && (
+                <>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Venue Name *
+                    </label>
+                    <input
+                      name="venuename"
+                      defaultValue={editingEvent?.venuename || ""}
+                      required
+                      type="text"
+                      className="w-full px-4 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-saffron-500/50"
+                      placeholder="e.g. VGP Convention Hall"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Address *
+                    </label>
+                    <input
+                      name="address"
+                      defaultValue={editingEvent?.address || ""}
+                      required
+                      type="text"
+                      className="w-full px-4 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-saffron-500/50"
+                      placeholder="e.g. East Coast Road"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      City *
+                    </label>
+                    <input
+                      name="city"
+                      defaultValue={editingEvent?.city || ""}
+                      required
+                      type="text"
+                      className="w-full px-4 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-saffron-500/50"
+                      placeholder="City"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      State *
+                    </label>
+                    <input
+                      name="state"
+                      defaultValue={editingEvent?.state || ""}
+                      required
+                      type="text"
+                      className="w-full px-4 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-saffron-500/50"
+                      placeholder="State"
+                    />
+                  </div>
+
+                  <div className="xl:col-span-3">
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Map Link
+                    </label>
+                    <input
+                      name="maplink"
+                      defaultValue={editingEvent?.maplink || ""}
+                      type="url"
+                      className="w-full px-4 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-saffron-500/50"
+                      placeholder="https://maps.google.com/..."
+                    />
+                  </div>
+                </>
+              )}
+
+              <div className="xl:col-span-3 grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Eligibility
+                  </label>
+                  <input
+                    name="eligibility"
+                    defaultValue={editingEvent?.eligibility || ""}
+                    type="text"
+                    className="w-full px-4 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-saffron-500/50"
+                    placeholder="e.g. Open to participants aged 12 years and above"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Dress Code
+                  </label>
+                  <input
+                    name="dresscode"
+                    defaultValue={editingEvent?.dresscode || ""}
+                    type="text"
+                    className="w-full px-4 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-saffron-500/50"
+                    placeholder="e.g. Traditional attire"
+                  />
+                </div>
               </div>
 
-              <div className="xl:col-span-3">
+              <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Map Link
+                  Registration Active
                 </label>
-                <input
-                  name="maplink"
-                  type="url"
-                  className="w-full px-4 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-saffron-500/50"
-                  placeholder="https://maps.google.com/..."
-                />
+                <div className="flex items-center h-[42px]">
+                  <input
+                    name="registrationactive"
+                    defaultChecked={
+                      editingEvent ? editingEvent.registrationactive : true
+                    }
+                    type="checkbox"
+                    className="w-5 h-5 text-saffron-600 border-gray-300 rounded focus:ring-saffron-500"
+                  />
+                  <span className="ml-2 text-sm text-gray-600">Is active</span>
+                </div>
               </div>
-
+              {deliveryMode === "offline" && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Registration Last Date
+                  </label>
+                  <input
+                    name="registrationlastdate"
+                    defaultValue={
+                      editingEvent?.registrationlastdate
+                        ? editingEvent.registrationlastdate.split("T")[0]
+                        : ""
+                    }
+                    type="date"
+                    className="w-full px-4 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-saffron-500/50"
+                  />
+                </div>
+              )}
               <div className="xl:col-span-3">
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Description
+                  Description *
                 </label>
                 <textarea
                   name="description"
+                  defaultValue={editingEvent?.description || ""}
                   rows={3}
+                  required
                   className="w-full px-4 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-saffron-500/50"
                   placeholder="Event description..."
                 ></textarea>
+              </div>
+
+              <div className="xl:col-span-3">
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Instructions *
+                </label>
+                <input
+                  name="instructions"
+                  defaultValue={editingEvent?.instructions || ""}
+                  type="text"
+                  className="w-full px-4 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-saffron-500/50"
+                  placeholder="Participants are kindly requested to arrive after having breakfast."
+                />
+              </div>
+
+              {deliveryMode === "offline" && (
+                <>
+                  <div className="xl:col-span-3 mt-4">
+                    <div className="flex justify-between items-center mb-2">
+                      <label className="block text-sm font-medium text-gray-700">
+                        Agenda
+                      </label>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setSchedules([
+                            ...schedules,
+                            { starttime: "", endtime: "", title: "" },
+                          ])
+                        }
+                        className="text-sm text-saffron-600 hover:text-saffron-700 font-medium flex items-center gap-1 cursor-pointer"
+                      >
+                        <Plus className="w-4 h-4" /> Add Schedule
+                      </button>
+                    </div>
+                    <div className="space-y-3">
+                      {schedules.map((schedule, index) => (
+                        <div
+                          key={index}
+                          className="flex flex-wrap sm:flex-nowrap gap-3 items-end bg-gray-50 p-3 rounded-xl border border-gray-100"
+                        >
+                          <div className="w-full sm:w-1/4">
+                            <label className="block text-xs text-gray-500 mb-1">
+                              Start Time
+                            </label>
+                            <input
+                              type="text"
+                              required
+                              value={schedule.starttime}
+                              onChange={(e) => {
+                                const newSchedules = [...schedules];
+                                newSchedules[index].starttime = e.target.value;
+                                setSchedules(newSchedules);
+                              }}
+                              className="w-full px-3 py-1.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-saffron-500/50"
+                              placeholder="08:00 AM"
+                            />
+                          </div>
+                          <div className="w-full sm:w-1/4">
+                            <label className="block text-xs text-gray-500 mb-1">
+                              End Time
+                            </label>
+                            <input
+                              type="text"
+                              required
+                              value={schedule.endtime}
+                              onChange={(e) => {
+                                const newSchedules = [...schedules];
+                                newSchedules[index].endtime = e.target.value;
+                                setSchedules(newSchedules);
+                              }}
+                              className="w-full px-3 py-1.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-saffron-500/50"
+                              placeholder="09:00 AM"
+                            />
+                          </div>
+                          <div className="w-full sm:flex-1">
+                            <label className="block text-xs text-gray-500 mb-1">
+                              Title
+                            </label>
+                            <input
+                              type="text"
+                              required
+                              value={schedule.title}
+                              onChange={(e) => {
+                                const newSchedules = [...schedules];
+                                newSchedules[index].title = e.target.value;
+                                setSchedules(newSchedules);
+                              }}
+                              className="w-full px-3 py-1.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-saffron-500/50"
+                              placeholder="Registration"
+                            />
+                          </div>
+                          {schedules.length > 1 && (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const newSchedules = schedules.filter(
+                                  (_, i) => i !== index,
+                                );
+                                setSchedules(newSchedules);
+                              }}
+                              className="p-1.5 text-red-500 hover:bg-red-50 rounded-lg shrink-0 mb-0.5 cursor-pointer"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </>
+              )}
+              <div className="xl:col-span-3 mt-4">
+                <div className="flex justify-between items-center mb-2">
+                  <label className="block text-sm font-medium text-gray-700">
+                    Benefits
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => setBenefits([...benefits, ""])}
+                    className="text-sm text-saffron-600 hover:text-saffron-700 font-medium flex items-center gap-1 cursor-pointer"
+                  >
+                    <Plus className="w-4 h-4" /> Add Benefit
+                  </button>
+                </div>
+                <div className="space-y-3">
+                  {benefits.map((benefit, index) => (
+                    <div key={index} className="flex gap-3">
+                      <input
+                        type="text"
+                        value={benefit}
+                        onChange={(e) => {
+                          const newB = [...benefits];
+                          newB[index] = e.target.value;
+                          setBenefits(newB);
+                        }}
+                        className="w-full px-3 py-1.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-saffron-500/50"
+                        placeholder="Benefit description"
+                      />
+                      {benefits.length > 1 && (
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setBenefits(benefits.filter((_, i) => i !== index))
+                          }
+                          className="p-1.5 text-red-500 hover:bg-red-50 rounded-lg shrink-0 cursor-pointer"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+              <div className="xl:col-span-3 mt-4">
+                <div className="flex justify-between items-center mb-2">
+                  <label className="block text-sm font-medium text-gray-700">
+                    Things To Bring
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => setThingsToBring([...thingsToBring, ""])}
+                    className="text-sm text-saffron-600 hover:text-saffron-700 font-medium flex items-center gap-1 cursor-pointer"
+                  >
+                    <Plus className="w-4 h-4" /> Add Item
+                  </button>
+                </div>
+                <div className="space-y-3">
+                  {thingsToBring.map((item, index) => (
+                    <div key={index} className="flex gap-3">
+                      <input
+                        type="text"
+                        value={item}
+                        onChange={(e) => {
+                          const newT = [...thingsToBring];
+                          newT[index] = e.target.value;
+                          setThingsToBring(newT);
+                        }}
+                        className="w-full px-3 py-1.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-saffron-500/50"
+                        placeholder="e.g. Yoga Mat"
+                      />
+                      {thingsToBring.length > 1 && (
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setThingsToBring(
+                              thingsToBring.filter((_, i) => i !== index),
+                            )
+                          }
+                          className="p-1.5 text-red-500 hover:bg-red-50 rounded-lg shrink-0 cursor-pointer"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      )}
+                    </div>
+                  ))}
+                </div>
               </div>
             </div>
             <div className="flex justify-end gap-3 pt-4 border-t border-gray-100 mt-6">
               <button
                 type="button"
-                onClick={() => setShowForm(false)}
+                onClick={() => {
+                  setShowForm(false);
+                  setEditingEvent(null);
+                  setDeliveryMode("offline");
+                  setSchedules([{ starttime: "", endtime: "", title: "" }]);
+                  setBenefits([""]);
+                  setThingsToBring([""]);
+                }}
                 className="px-6 py-2 border border-gray-200 text-gray-600 rounded-xl hover:bg-gray-50 font-medium cursor-pointer"
               >
                 Cancel
@@ -460,11 +902,15 @@ export default function Events() {
               <thead>
                 <tr className="bg-gray-50/50 border-b border-gray-100 text-gray-500 text-sm">
                   <th className="px-6 py-4 font-medium">S.No</th>
-                  <th className="px-6 py-4 font-medium">Event Details</th>
+                  <th className="px-6 py-4 font-medium">Actions</th>
+                  <th className="px-6 py-4 font-medium min-w-[300px]">
+                    Event Details
+                  </th>
+                  <th className="px-6 py-4 font-medium">Level Type</th>
                   <th className="px-6 py-4 font-medium">Date & Location</th>
-                  <th className="px-6 py-4 font-medium text-center">Status</th>
+                  <th className="px-6 py-4 font-medium">Registration Fee</th>
                   <th className="px-6 py-4 font-medium">Attendees</th>
-                  <th className="px-6 py-4 font-medium text-right">Actions</th>
+                  <th className="px-6 py-4 font-medium text-center">Status</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
@@ -489,6 +935,49 @@ export default function Events() {
                         </h1>
                       </td>
                       <td className="px-6 py-4">
+                        <div className="flex items-center gap-0 transition-opacity">
+                          <button
+                            onClick={() => navigate(`/events/${event.id}`)}
+                            className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors cursor-pointer"
+                            title="View Details"
+                          >
+                            <Eye className="w-4 h-4" />
+                          </button>
+                          <button
+                            onClick={() => {
+                              setEditingEvent(event);
+                              setDeliveryMode(event.deliverymode || "offline");
+                              setLevelType(event.leveltype || "level1");
+                              setShowForm(true);
+                              setSchedules(
+                                event.agenda?.length
+                                  ? event.agenda
+                                  : [{ starttime: "", endtime: "", title: "" }],
+                              );
+                              setBenefits(
+                                event.benefits?.length ? event.benefits : [""],
+                              );
+                              setThingsToBring(
+                                event.thingstobring?.length
+                                  ? event.thingstobring
+                                  : [""],
+                              );
+                            }}
+                            className="p-2 text-gray-400 hover:text-saffron-600 hover:bg-saffron-50 rounded-lg transition-colors cursor-pointer"
+                            title="Edit"
+                          >
+                            <Edit2 className="w-4 h-4" />
+                          </button>
+                          <button
+                            onClick={() => deleteEvent(event.id)}
+                            className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors cursor-pointer"
+                            title="Delete"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4">
                         <div className="flex items-center gap-4">
                           <img
                             src={
@@ -508,40 +997,101 @@ export default function Events() {
                             >
                               {event.title}
                             </p>
-                            <p className="text-xs text-gray-500 mt-1">
-                              Type:{" "}
-                              <span
-                                className={`capitalize ${getEventStatusColor(event.eventtype)}`}
-                              >
-                                {event.eventtype}
-                              </span>{" "}
-                              | ID: {event.id}
-                            </p>
+                            {event.deliverymode === "online" ? (
+                              <p className="text-xs text-gray-500 mt-1">
+                                Delivery Mode:{" "}
+                                <span className="text-pink-600 font-bold">
+                                  {event.deliverymode}
+                                </span>{" "}
+                                | ID: {event.id}
+                              </p>
+                            ) : (
+                              <p className="text-xs text-gray-500 mt-1">
+                                Type:{" "}
+                                <span
+                                  className={`capitalize ${getEventStatusColor(
+                                    event.eventtype,
+                                  )}`}
+                                >
+                                  {event.eventtype}
+                                </span>{" "}
+                                | ID: {event.id}
+                              </p>
+                            )}
                           </div>
                         </div>
                       </td>
+
+                      <td className="px-6 py-4">
+                        <span
+                          className={`inline-block px-2 py-1 rounded-md text-[10px] font-bold uppercase tracking-wider ${
+                            event.leveltype === "level2"
+                              ? "bg-purple-100 text-purple-700 border border-purple-200"
+                              : "bg-blue-100 text-blue-700 border border-blue-200"
+                          }`}
+                        >
+                          {event.leveltype || "Level 1"}
+                        </span>
+                      </td>
+
                       <td className="px-6 py-4">
                         <div className="space-y-1">
                           <div className="flex items-center gap-2 text-sm text-gray-600">
                             <CalendarIcon className="w-4 h-4 text-saffron-500 shrink-0" />
                             <span className="whitespace-nowrap">
-                              {new Date(event.eventdate).toLocaleDateString(
-                                "en-US",
-                                {
-                                  month: "short",
-                                  day: "numeric",
-                                  year: "numeric",
-                                },
-                              )}
+                              {event.eventdate
+                                ? new Date(event.eventdate).toLocaleDateString(
+                                    "en-US",
+                                    {
+                                      month: "short",
+                                      day: "numeric",
+                                      year: "numeric",
+                                    },
+                                  )
+                                : "TBA"}
+
+                              {event.eventtodate && " - "}
+
+                              {event.eventtodate &&
+                                new Date(event.eventtodate).toLocaleDateString(
+                                  "en-US",
+                                  {
+                                    month: "short",
+                                    day: "numeric",
+                                    year: "numeric",
+                                  },
+                                )}
                             </span>
                           </div>
-                          <div
-                            className="flex items-center gap-2 text-xs text-gray-500 line-clamp-1"
-                            title={`${event.address}, ${event.city}`}
-                          >
-                            <MapPin className="w-3.5 h-3.5 shrink-0" />
-                            {event.city}, {event.state}
-                          </div>
+                          {event.deliverymode !== "online" ? (
+                            <div
+                              className="flex items-center gap-2 text-xs text-gray-500 line-clamp-1"
+                              title={`${event.address || ""}, ${event.city || ""}`}
+                            >
+                              <MapPin className="w-3.5 h-3.5 shrink-0" />
+                              {event.city || "TBA"}, {event.state || "TBA"}
+                            </div>
+                          ) : (
+                            <div className="flex items-center gap-2 text-xs text-gray-500 line-clamp-1">
+                              <MapPin className="w-3.5 h-3.5 shrink-0" />
+                              Online
+                            </div>
+                          )}
+                        </div>
+                      </td>
+
+                      <td className="px-6 py-4">
+                        <div className="flex items-center gap-1">
+                          <IndianRupee className="h-4 w-4 text-black " />
+                          <p className="font-bold text-black">
+                            {event.registrationfee}
+                          </p>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4">
+                        <div className="flex items-center gap-2 text-sm text-gray-600">
+                          <Users className="w-4 h-4 text-gray-400" />
+                          {event.participants || 1}
                         </div>
                       </td>
                       <td className="px-6 py-4 text-center">
@@ -563,36 +1113,6 @@ export default function Events() {
                           </span>
                         </div>
                       </td>
-                      <td className="px-6 py-4">
-                        <div className="flex items-center gap-2 text-sm text-gray-600">
-                          <Users className="w-4 h-4 text-gray-400" />
-                          {event.partcipants?.toLocaleString() || 0}
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 text-right">
-                        <div className="flex items-center justify-end gap-2 transition-opacity">
-                          <button
-                            onClick={() => navigate(`/events/${event.id}`)}
-                            className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors cursor-pointer"
-                            title="View Details"
-                          >
-                            <Eye className="w-4 h-4" />
-                          </button>
-                          <button
-                            className="p-2 text-gray-400 hover:text-saffron-600 hover:bg-saffron-50 rounded-lg transition-colors"
-                            title="Edit"
-                          >
-                            <Edit2 className="w-4 h-4" />
-                          </button>
-                          <button
-                            onClick={() => deleteEvent(event.id)}
-                            className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors cursor-pointer"
-                            title="Delete"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
-                        </div>
-                      </td>
                     </tr>
                   ))
                 )}
@@ -600,51 +1120,7 @@ export default function Events() {
             </table>
           </div>
 
-          {/* Pagination */}
-          {meta && (
-            <div className="p-4 border-t border-gray-100 flex flex-col sm:flex-row items-center justify-between gap-4 text-sm text-gray-500 bg-gray-50/50">
-              <p>
-                Showing {(meta.currentPage - 1) * meta.pageSize + 1} to{" "}
-                {Math.min(meta.currentPage * meta.pageSize, meta.totalItems)} of{" "}
-                {meta.totalItems} entries
-              </p>
-              <div className="flex gap-1 overflow-x-auto">
-                <button
-                  onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-                  disabled={!meta.hasPreviousPage}
-                  className="px-3 py-1 border border-gray-200 rounded-md hover:bg-gray-100 disabled:opacity-50 disabled:hover:bg-transparent transition-colors cursor-pointer"
-                >
-                  Prev
-                </button>
-
-                {Array.from({ length: meta.totalPages }, (_, i) => i + 1).map(
-                  (pageNum) => (
-                    <button
-                      key={pageNum}
-                      onClick={() => setCurrentPage(pageNum)}
-                      className={`px-3 py-1 rounded-md transition-colors cursor-pointer ${
-                        pageNum === meta.currentPage
-                          ? "bg-saffron-500 text-white shadow-sm"
-                          : "border border-gray-200 hover:bg-gray-100"
-                      }`}
-                    >
-                      {pageNum}
-                    </button>
-                  ),
-                )}
-
-                <button
-                  onClick={() =>
-                    setCurrentPage((p) => Math.min(meta.totalPages, p + 1))
-                  }
-                  disabled={!meta.hasNextPage}
-                  className="px-3 py-1 border border-gray-200 rounded-md hover:bg-gray-100 disabled:opacity-50 disabled:hover:bg-transparent transition-colors cursor-pointer"
-                >
-                  Next
-                </button>
-              </div>
-            </div>
-          )}
+          {/* Pagination Removed */}
         </div>
       )}
     </div>

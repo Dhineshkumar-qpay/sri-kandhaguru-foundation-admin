@@ -19,7 +19,7 @@ export default function Login({ onLogin }: { onLogin: () => void }) {
 
     setLoading(true);
     try {
-      const response = await api.post("/user/login", { email, password });
+      const response = await api.post("/admin/login", { email, password });
 
       if (response.data?.success) {
         localStorage.setItem("token", response.data.data.token);

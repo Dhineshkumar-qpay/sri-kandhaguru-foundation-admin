@@ -51,7 +51,10 @@ export default function Reviews() {
     );
 
     try {
-      const response = await api.post("/testimonial/update-status", { id, status: newStatus });
+      const response = await api.post("/testimonial/update-status", {
+        id,
+        status: newStatus,
+      });
       if (!response.data?.success) {
         // Revert on failure
         setReviews((prev) =>
@@ -127,12 +130,12 @@ export default function Reviews() {
             <thead>
               <tr className="bg-gray-50/50 border-b border-gray-100 text-gray-500 text-sm">
                 <th className="px-6 py-4 font-medium">S.No</th>
+                <th className="px-6 py-4 font-medium text-right">Actions</th>
                 <th className="px-6 py-4 font-medium">User Details</th>
                 <th className="px-6 py-4 font-medium">Rating</th>
                 <th className="px-6 py-4 font-medium">Review</th>
                 <th className="px-6 py-4 font-medium">Status</th>
                 <th className="px-6 py-4 font-medium">Date</th>
-                <th className="px-6 py-4 font-medium text-right">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
@@ -155,6 +158,18 @@ export default function Reviews() {
                       <span className="flex h-9 w-9 items-center justify-center rounded-full bg-orange-100 text-sm font-bold text-orange-600 ring-orange-200">
                         {(currentPage - 1) * pageSize + index + 1}
                       </span>
+                    </td>
+                    <td className="px-6 py-4 text-right">
+                      <button
+                        onClick={() => {
+                          setSelectedReview(review);
+                          setIsSidebarOpen(true);
+                        }}
+                        className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg cursor-pointer transition-colors"
+                        title="View Details"
+                      >
+                        <Eye className="w-5 h-5" />
+                      </button>
                     </td>
                     <td className="px-6 py-4">
                       <p className="font-semibold text-gray-800 text-md">
@@ -218,18 +233,6 @@ export default function Reviews() {
                           )}
                         </span>
                       </div>
-                    </td>
-                    <td className="px-6 py-4 text-right">
-                      <button
-                        onClick={() => {
-                          setSelectedReview(review);
-                          setIsSidebarOpen(true);
-                        }}
-                        className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg cursor-pointer transition-colors"
-                        title="View Details"
-                      >
-                        <Eye className="w-5 h-5" />
-                      </button>
                     </td>
                   </tr>
                 ))

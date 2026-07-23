@@ -15,25 +15,36 @@ import api from "../services/api";
 interface Booking {
   id: number;
   eventid: number;
+  userid: number;
   fullname: string;
   phone: string;
   whatsapp: string;
   email: string;
+  occupation: string;
   gender: string;
   age: number;
   city: string;
   state: string;
+  country: string;
+  ishealthissue: boolean;
+  healthissues: { name: string; issue: string }[];
   participants: number;
   adultcount: number;
   childrencount: number;
+  bookingdate: string | null;
+  bookingtime: string | null;
   remarks: string;
-  amount: string;
+  totalamount: string;
+  deliverymode: string;
   paymentstatus: string;
-  paymentid: string | null;
+  transactionid: string | null;
   bookingstatus: string;
   eventname: string;
+  eventdate: string;
+  address: string;
+  registrationfee: number;
   createdAt: string;
-  updatedAt: string;
+  updatedAt?: string;
 }
 
 export default function Bookings() {
@@ -47,10 +58,13 @@ export default function Bookings() {
   const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
-  const [events, setEvents] = useState<{id: number, title: string}[]>([]);
+  const [events, setEvents] = useState<
+    { id: number; title: string; city: string; deliverymode: string }[]
+  >([]);
   const [selectedEventId, setSelectedEventId] = useState<string>("");
   const [startDate, setStartDate] = useState<string>("");
   const [endDate, setEndDate] = useState<string>("");
+  const [deliveryMode, setDeliveryMode] = useState<string>("");
 
   useEffect(() => {
     fetchEventsList();
@@ -62,7 +76,9 @@ export default function Bookings() {
 
   const fetchEventsList = async () => {
     try {
-      const response = await api.post("/event/get", { page: 1 });
+      const response = await api.post("/event/get", {
+        deliverymode: "",
+      });
       if (response.data?.success) {
         setEvents(response.data.data.events || []);
       }
@@ -78,6 +94,7 @@ export default function Bookings() {
         eventid: selectedEventId ? Number(selectedEventId) : null,
         startdate: startDate || null,
         enddate: endDate || null,
+        deliverymode: deliveryMode || null,
       });
       if (response.data?.success) {
         setBookings(response.data.data || []);
@@ -160,9 +177,18 @@ export default function Bookings() {
               <option value="">All Events</option>
               {events.map((ev) => (
                 <option key={ev.id} value={ev.id}>
-                  {ev.title}
+                  {ev.title} - {ev.city == "" ? "Online" : ev.city}
                 </option>
               ))}
+            </select>
+            <select
+              value={deliveryMode}
+              onChange={(e) => setDeliveryMode(e.target.value)}
+              className="px-4 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-saffron-500/50 text-sm bg-white"
+            >
+              <option value="">All</option>
+              <option value="online">Online</option>
+              <option value="offline">Offline</option>
             </select>
             <input
               type="date"
@@ -197,14 +223,14 @@ export default function Bookings() {
             <thead>
               <tr className="bg-gray-50/50 border-b border-gray-100 text-gray-500 text-sm">
                 <th className="px-6 py-4 font-medium">S.No</th>
+                <th className="px-6 py-4 font-medium text-right">Actions</th>
                 <th className="px-6 py-4 font-medium">Participant</th>
-                 <th className="px-6 py-4 font-medium">Eventname</th>
+                <th className="px-6 py-4 font-medium">Eventname</th>
                 <th className="px-6 py-4 font-medium">Count</th>
                 <th className="px-6 py-4 font-medium">Amount</th>
                 <th className="px-6 py-4 font-medium">Payment Status</th>
                 <th className="px-6 py-4 font-medium">Booking Status</th>
                 <th className="px-6 py-4 font-medium">Date</th>
-                <th className="px-6 py-4 font-medium text-right">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
@@ -228,7 +254,18 @@ export default function Bookings() {
                         {(currentPage - 1) * pageSize + index + 1}
                       </span>
                     </td>
-                   
+                    <td className="px-6 py-4 text-right">
+                      <button
+                        onClick={() => {
+                          setSelectedBooking(booking);
+                          setIsSidebarOpen(true);
+                        }}
+                        className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg cursor-pointer transition-colors"
+                        title="View Details"
+                      >
+                        <Eye className="w-4 h-4" />
+                      </button>
+                    </td>
                     <td className="px-6 py-4">
                       <p className="font-semibold text-gray-800 text-md">
                         {booking.fullname}
@@ -244,10 +281,23 @@ export default function Bookings() {
                         <span>{booking.phone}</span>
                       </div>
                     </td>
-                     <td className="px-6 py-4 w-[200px]">
+                    <td className="px-6 py-4 w-[200px]">
                       <p className="w-[180px] text-sm font-semibold text-gray-800 line-clamp-3 break-words">
                         {booking.eventname}
                       </p>
+                      {booking.deliverymode && (
+                        <p className="mt-2">
+                          <span
+                            className={`inline-block px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${
+                              booking.deliverymode === "online"
+                                ? "bg-pink-100 text-pink-700 border border-pink-200"
+                                : "bg-emerald-100 text-emerald-700 border border-emerald-200"
+                            }`}
+                          >
+                            {booking.deliverymode}
+                          </span>
+                        </p>
+                      )}
                     </td>
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-2 text-sm text-gray-600">
@@ -263,7 +313,7 @@ export default function Bookings() {
                       </div>
                     </td>
                     <td className="px-6 py-4 font-semibold text-gray-800">
-                      ₹{booking.amount}
+                      ₹{booking.totalamount}
                     </td>
                     <td className="px-6 py-4">
                       <span
@@ -293,18 +343,6 @@ export default function Bookings() {
                           )}
                         </span>
                       </div>
-                    </td>
-                    <td className="px-6 py-4 text-right">
-                      <button
-                        onClick={() => {
-                          setSelectedBooking(booking);
-                          setIsSidebarOpen(true);
-                        }}
-                        className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg cursor-pointer transition-colors"
-                        title="View Details"
-                      >
-                        <Eye className="w-5 h-5" />
-                      </button>
                     </td>
                   </tr>
                 ))
@@ -412,7 +450,11 @@ export default function Bookings() {
                     </div>
                     <p className="text-gray-600 text-sm flex items-center gap-2 bg-white px-3 py-1.5 rounded-full border border-saffron-100 w-full justify-center">
                       <MapPin className="w-4 h-4 text-saffron-500" />{" "}
-                      {selectedBooking.city}, {selectedBooking.state}
+                      {selectedBooking.city}, {selectedBooking.state},{" "}
+                      {selectedBooking.country}
+                    </p>
+                    <p className="text-gray-600 text-sm text-center mt-2">
+                      Occupation: {selectedBooking.occupation}
                     </p>
                   </div>
                 </div>
@@ -467,7 +509,7 @@ export default function Bookings() {
                       <div className="flex justify-between items-center">
                         <span className="text-gray-600">Total Amount</span>
                         <span className="font-bold text-gray-800 text-lg">
-                          ₹{selectedBooking.amount}
+                          ₹{selectedBooking.totalamount}
                         </span>
                       </div>
                       <div className="flex justify-between items-center">
@@ -486,18 +528,67 @@ export default function Bookings() {
                           {selectedBooking.bookingstatus}
                         </span>
                       </div>
-                      {selectedBooking.paymentid && (
+                      {selectedBooking.transactionid && (
                         <div className="flex justify-between items-center pt-2 border-t border-gray-200 mt-2">
                           <span className="text-gray-600 text-sm">
-                            Payment ID
+                            Transaction ID
                           </span>
                           <span className="font-mono text-xs bg-white px-2 py-1 border border-gray-200 rounded">
-                            {selectedBooking.paymentid}
+                            {selectedBooking.transactionid}
                           </span>
                         </div>
                       )}
                     </div>
                   </div>
+
+                  <div className="bg-gray-50 p-4 rounded-xl border border-gray-100">
+                    <p className="text-sm font-semibold text-gray-500 mb-3 uppercase tracking-wider">
+                      Event Details
+                    </p>
+                    <div className="space-y-2 text-sm text-gray-700">
+                      <p>
+                        <span className="font-medium">Event Date:</span>{" "}
+                        {selectedBooking.eventdate}
+                      </p>
+                      <p className="flex items-center gap-2">
+                        <span className="font-medium">Delivery Mode:</span>{" "}
+                        <span
+                          className={`inline-block px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${
+                            selectedBooking.deliverymode === "online"
+                              ? "bg-pink-100 text-pink-700 border border-pink-200"
+                              : "bg-emerald-100 text-emerald-700 border border-emerald-200"
+                          }`}
+                        >
+                          {selectedBooking.deliverymode}
+                        </span>
+                      </p>
+                      <p>
+                        <span className="font-medium">Venue:</span>{" "}
+                        {selectedBooking.address}
+                      </p>
+                      <p>
+                        <span className="font-medium">Fee (per person):</span> ₹
+                        {selectedBooking.registrationfee}
+                      </p>
+                    </div>
+                  </div>
+
+                  {selectedBooking.ishealthissue &&
+                    selectedBooking.healthissues?.length > 0 && (
+                      <div className="bg-red-50 p-4 rounded-xl border border-red-100">
+                        <p className="text-sm font-semibold text-red-600 mb-2 uppercase tracking-wider">
+                          Health Issues
+                        </p>
+                        <ul className="list-disc pl-4 space-y-1 text-sm text-red-800">
+                          {selectedBooking.healthissues.map((hi, i) => (
+                            <li key={i}>
+                              <span className="font-medium">{hi.name}:</span>{" "}
+                              {hi.issue}
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
 
                   {selectedBooking.remarks && (
                     <div className="bg-gray-50 p-4 rounded-xl border border-gray-100">

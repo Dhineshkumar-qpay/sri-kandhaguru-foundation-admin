@@ -323,11 +323,12 @@ export default function Videos() {
               <thead>
                 <tr className="bg-gray-50/50 border-b border-gray-100 text-gray-500 text-sm">
                   <th className="px-6 py-4 font-medium">S.No</th>
+                   <th className="px-6 py-4 font-medium text-right">Actions</th>
                   <th className="px-6 py-4 font-medium">Video Details</th>
                   <th className="px-6 py-4 font-medium">Category</th>
                   <th className="px-6 py-4 font-medium">Description</th>
                   <th className="px-6 py-4 font-medium">Date</th>
-                  <th className="px-6 py-4 font-medium text-right">Actions</th>
+                 
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
@@ -350,6 +351,30 @@ export default function Videos() {
                         <h1 className="flex h-9 w-9 items-center justify-center rounded-full bg-orange-100 text-sm font-bold text-orange-600  ring-orange-200">
                           {index + 1}
                         </h1>
+                      </td>
+                      <td className="px-6 py-4 text-right">
+                        <div className="flex items-center justify-end gap-0 transition-opacity">
+                          <a
+                            href={
+                              item.video.startsWith("http")
+                                ? item.video
+                                : `http://localhost:3003${item.video}`
+                            }
+                            target="_blank"
+                            rel="noreferrer"
+                            className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg cursor-pointer"
+                            title="View Video"
+                          >
+                            <Eye className="w-4 h-4" />
+                          </a>
+                          <button
+                            onClick={() => deleteVideo(item.id)}
+                            className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg cursor-pointer"
+                            title="Delete"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
                       </td>
                       <td className="px-6 py-4">
                         <div className="flex items-center gap-4">
@@ -411,30 +436,7 @@ export default function Videos() {
                           </span>
                         </div>
                       </td>
-                      <td className="px-6 py-4 text-right">
-                        <div className="flex items-center justify-end gap-2 transition-opacity">
-                          <a
-                            href={
-                              item.video.startsWith("http")
-                                ? item.video
-                                : `http://localhost:3003${item.video}`
-                            }
-                            target="_blank"
-                            rel="noreferrer"
-                            className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg cursor-pointer"
-                            title="View Video"
-                          >
-                            <Eye className="w-4 h-4" />
-                          </a>
-                          <button
-                            onClick={() => deleteVideo(item.id)}
-                            className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg cursor-pointer"
-                            title="Delete"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
-                        </div>
-                      </td>
+                      
                     </tr>
                   ))
                 )}

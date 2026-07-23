@@ -223,9 +223,10 @@ export default function Categories() {
               <thead>
                 <tr className="bg-gray-50/50 border-b border-gray-100 text-gray-500 text-sm">
                   <th className="px-6 py-4 font-medium">S.No</th>
+                   <th className="px-6 py-4 font-medium ">Actions</th>
                   <th className="px-6 py-4 font-medium">Category Name</th>
                   <th className="px-6 py-4 font-medium">Date</th>
-                  <th className="px-6 py-4 font-medium text-right">Actions</th>
+                 
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
@@ -249,6 +250,15 @@ export default function Categories() {
                           {(currentPage - 1) * pageSize + index + 1}
                         </h1>
                       </td>
+                       <td className="px-6 py-4 ">
+                        <button
+                          onClick={() => deleteCategory(category.categoryid)}
+                          className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors cursor-pointer"
+                          title="Delete"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </td>
                       <td className="px-6 py-4">
                         <p className="font-semibold text-gray-800 text-md">
                           {category.categoryname}
@@ -268,15 +278,7 @@ export default function Categories() {
                           </span>
                         </div>
                       </td>
-                      <td className="px-6 py-4 text-right">
-                        <button
-                          onClick={() => deleteCategory(category.categoryid)}
-                          className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors cursor-pointer"
-                          title="Delete"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
-                      </td>
+                     
                     </tr>
                   ))
                 )}

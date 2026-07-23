@@ -15,6 +15,7 @@ import {
   X,
   Star,
   Ticket,
+  ShoppingBag,
 } from "lucide-react";
 import { clsx } from "clsx";
 import { motion, AnimatePresence } from "framer-motion";
@@ -29,6 +30,7 @@ const sidebarLinks = [
   { name: "Dashboard", path: "/dashboard", icon: LayoutDashboard },
   { name: "Event Bookings", path: "/bookings", icon: Ticket },
   { name: "Events", path: "/events", icon: Calendar },
+  { name: "Products", path: "/products", icon: ShoppingBag },
   { name: "Categories", path: "/categories", icon: Tags },
   { name: "Video Library", path: "/videos", icon: Video },
   { name: "Gallery", path: "/gallery", icon: ImageIcon },
@@ -50,7 +52,7 @@ export default function Layout() {
 
   useEffect(() => {
     api
-      .post("/user/get")
+      .post("/admin/get")
       .then((res) => {
         if (res.data?.success) {
           setProfile(res.data.data);
