@@ -14,6 +14,8 @@ import Contacts from './pages/Contacts';
 import Reviews from './pages/Reviews';
 import Bookings from './pages/Bookings';
 import Products from './pages/Products';
+import Orders from './pages/Orders';
+import OrderDetail from './pages/OrderDetail';
 
 function App() {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(() => {
@@ -39,6 +41,8 @@ function App() {
           <Route path="reviews" element={<Reviews />} />
           <Route path="settings" element={<Settings />} />
           <Route path="products" element={<Products />} />
+          <Route path="orders" element={<Orders />} />
+          <Route path="orders/:id" element={<OrderDetail />} />
           <Route path="*" element={<Navigate to="/dashboard" replace />} />
         </Route>
       </Routes>

@@ -1024,11 +1024,10 @@ export default function Events() {
 
                       <td className="px-6 py-4">
                         <span
-                          className={`inline-block px-2 py-1 rounded-md text-[10px] font-bold uppercase tracking-wider ${
-                            event.leveltype === "level2"
+                          className={`inline-block px-2 py-1 rounded-md text-[10px] font-bold uppercase tracking-wider ${event.leveltype === "level2"
                               ? "bg-purple-100 text-purple-700 border border-purple-200"
                               : "bg-blue-100 text-blue-700 border border-blue-200"
-                          }`}
+                            }`}
                         >
                           {event.leveltype || "Level 1"}
                         </span>
@@ -1041,13 +1040,13 @@ export default function Events() {
                             <span className="whitespace-nowrap">
                               {event.eventdate
                                 ? new Date(event.eventdate).toLocaleDateString(
-                                    "en-US",
-                                    {
-                                      month: "short",
-                                      day: "numeric",
-                                      year: "numeric",
-                                    },
-                                  )
+                                  "en-US",
+                                  {
+                                    month: "short",
+                                    day: "numeric",
+                                    year: "numeric",
+                                  },
+                                )
                                 : "TBA"}
 
                               {event.eventtodate && " - "}

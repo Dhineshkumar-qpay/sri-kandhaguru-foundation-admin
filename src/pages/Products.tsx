@@ -13,12 +13,15 @@ interface Product {
   sellingprice: number;
   createdAt?: string;
   updatedAt?: string;
+  benefits?: { title: string; description: string }[];
+  size?: string;
 }
 
 export default function Products() {
   const [searchTerm, setSearchTerm] = useState("");
   const [showForm, setShowForm] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
+  const [benefits, setBenefits] = useState([{ title: "", description: "" }]);
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
@@ -71,6 +74,15 @@ export default function Products() {
       payload.append("category", formData.get("category") as string);
       payload.append("price", formData.get("price") as string);
       payload.append("sellingprice", formData.get("sellingprice") as string);
+      payload.append("size", (formData.get("size") as string) || "");
+      payload.append(
+        "benefits",
+        JSON.stringify(
+          benefits.filter(
+            (b) => b.title.trim() !== "" || b.description.trim() !== ""
+          )
+        )
+      );
 
       if (editingProduct) {
         payload.append("id", editingProduct.id.toString());
@@ -126,6 +138,7 @@ export default function Products() {
         <button
           onClick={() => {
             setEditingProduct(null);
+            setBenefits([{ title: "", description: "" }]);
             setShowForm(true);
           }}
           className="bg-saffron-500 hover:bg-saffron-600 text-white px-6 py-2.5 rounded-xl font-medium flex items-center gap-2 shadow-lg shadow-saffron-500/30 transition-all active:scale-95 cursor-pointer"
@@ -149,6 +162,7 @@ export default function Products() {
               onClick={() => {
                 setShowForm(false);
                 setEditingProduct(null);
+                setBenefits([{ title: "", description: "" }]);
               }}
               className="text-gray-400 hover:text-gray-600 cursor-pointer"
             >
@@ -203,6 +217,19 @@ export default function Products() {
                 </select>
               </div>
 
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Size (Optional)
+                </label>
+                <input
+                  name="size"
+                  defaultValue={editingProduct?.size || ""}
+                  type="text"
+                  className="w-full px-4 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-saffron-500/50"
+                  placeholder="e.g. 8mm, Medium, etc."
+                />
+              </div>
+
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -221,12 +248,11 @@ export default function Products() {
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Selling Price *
+                    Selling Price
                   </label>
                   <input
                     name="sellingprice"
                     defaultValue={editingProduct?.sellingprice || ""}
-                    required
                     type="number"
                     step="0.01"
                     min="0"
@@ -249,6 +275,70 @@ export default function Products() {
                   placeholder="Product description..."
                 ></textarea>
               </div>
+              <div className="md:col-span-2">
+                <div className="flex justify-between items-center mb-2">
+                  <label className="block text-sm font-medium text-gray-700">
+                    Product Benefits
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setBenefits([...benefits, { title: "", description: "" }])
+                    }
+                    className="text-saffron-600 hover:text-saffron-700 text-sm font-medium flex items-center gap-1 cursor-pointer"
+                  >
+                    <Plus className="w-4 h-4" />
+                    Add Benefit
+                  </button>
+                </div>
+                <div className="space-y-3">
+                  {benefits.map((benefit, index) => (
+                    <div
+                      key={index}
+                      className="flex gap-3 items-start bg-gray-50/50 p-3 rounded-xl border border-gray-100"
+                    >
+                      <div className="flex-1 space-y-3">
+                        <input
+                          type="text"
+                          value={benefit.title}
+                          onChange={(e) => {
+                            const newBenefits = [...benefits];
+                            newBenefits[index].title = e.target.value;
+                            setBenefits(newBenefits);
+                          }}
+                          className="w-full px-3 py-1.5 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-saffron-500/50 text-sm"
+                          placeholder="Benefit Title (e.g. Mental Clarity)"
+                        />
+                        <input
+                          type="text"
+                          value={benefit.description}
+                          onChange={(e) => {
+                            const newBenefits = [...benefits];
+                            newBenefits[index].description = e.target.value;
+                            setBenefits(newBenefits);
+                          }}
+                          className="w-full px-3 py-1.5 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-saffron-500/50 text-sm"
+                          placeholder="Benefit Description (e.g. Improves focus)"
+                        />
+                      </div>
+                      {benefits.length > 1 && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const newBenefits = benefits.filter(
+                              (_, i) => i !== index
+                            );
+                            setBenefits(newBenefits);
+                          }}
+                          className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors mt-1 cursor-pointer"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
             </div>
 
             <div className="flex justify-end gap-3 pt-4 border-t border-gray-100 mt-6">
@@ -257,6 +347,7 @@ export default function Products() {
                 onClick={() => {
                   setShowForm(false);
                   setEditingProduct(null);
+                  setBenefits([{ title: "", description: "" }]);
                 }}
                 className="px-6 py-2 border border-gray-200 text-gray-600 rounded-xl hover:bg-gray-50 font-medium cursor-pointer"
               >
@@ -265,9 +356,8 @@ export default function Products() {
               <button
                 type="submit"
                 disabled={loading}
-                className={`px-6 py-2 bg-saffron-500 text-white rounded-xl hover:bg-saffron-600 font-medium shadow-md shadow-saffron-500/20 cursor-pointer ${
-                  loading ? "opacity-70 cursor-not-allowed" : ""
-                }`}
+                className={`px-6 py-2 bg-saffron-500 text-white rounded-xl hover:bg-saffron-600 font-medium shadow-md shadow-saffron-500/20 cursor-pointer ${loading ? "opacity-70 cursor-not-allowed" : ""
+                  }`}
               >
                 {loading ? "Saving..." : "Save Product"}
               </button>
@@ -334,6 +424,11 @@ export default function Products() {
                           <button
                             onClick={() => {
                               setEditingProduct(product);
+                              setBenefits(
+                                product.benefits?.length
+                                  ? product.benefits
+                                  : [{ title: "", description: "" }]
+                              );
                               setShowForm(true);
                             }}
                             className="p-2 text-gray-400 hover:text-saffron-600 hover:bg-saffron-50 rounded-lg transition-colors cursor-pointer"
@@ -387,7 +482,7 @@ export default function Products() {
                       <td className="px-6 py-4 text-right">
                         <div className="flex flex-col items-end">
                           {product.sellingprice === null ||
-                          product.sellingprice === 0 ? (
+                            product.sellingprice === 0 ? (
                             <>
                               <span className="font-bold text-gray-800">
                                 ₹{product.price}

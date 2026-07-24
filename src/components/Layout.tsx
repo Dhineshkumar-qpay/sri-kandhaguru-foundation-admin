@@ -16,6 +16,7 @@ import {
   Star,
   Ticket,
   ShoppingBag,
+  ShoppingCart,
 } from "lucide-react";
 import { clsx } from "clsx";
 import { motion, AnimatePresence } from "framer-motion";
@@ -31,6 +32,7 @@ const sidebarLinks = [
   { name: "Event Bookings", path: "/bookings", icon: Ticket },
   { name: "Events", path: "/events", icon: Calendar },
   { name: "Products", path: "/products", icon: ShoppingBag },
+  { name: "Orders", path: "/orders", icon: ShoppingCart },
   { name: "Categories", path: "/categories", icon: Tags },
   { name: "Video Library", path: "/videos", icon: Video },
   { name: "Gallery", path: "/gallery", icon: ImageIcon },
