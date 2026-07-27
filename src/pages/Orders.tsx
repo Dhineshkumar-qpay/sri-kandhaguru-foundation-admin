@@ -1,12 +1,8 @@
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import {
   Search,
   Eye,
-  X,
-  MapPin,
-  ShoppingBag,
   IndianRupee,
-  Phone,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import api from "../services/api";
@@ -24,6 +20,8 @@ interface Order {
   id: number;
   userid: number;
   addressid: number;
+  subtotal: number;
+  shippingcost: number;
   totalamount: number;
   orderstatus: string;
   items: OrderItem[];
@@ -234,7 +232,7 @@ export default function Orders() {
                   >
                     <td className="px-6 py-4">
                       <span className="flex h-9 w-12 items-center justify-center rounded-full bg-orange-100 text-sm font-bold text-orange-600 ring-orange-200">
-                        #{order.id}
+                        {order.id}
                       </span>
                     </td>
                     <td className="px-6 py-4 text-right">
@@ -269,9 +267,16 @@ export default function Orders() {
                       </div>
                     </td>
                     <td className="px-6 py-4">
-                      <div className="flex items-center gap-1 font-bold text-gray-800">
-                        <IndianRupee className="w-4 h-4 text-gray-500" />
-                        {order.totalamount}
+                      <div className="flex flex-col gap-1">
+                        <div className="flex items-center gap-1 font-bold text-gray-800">
+                          <IndianRupee className="w-4 h-4 text-gray-500" />
+                          {order.totalamount}
+                        </div>
+                        {order.shippingcost === 0 && (
+                          <span className="text-[10px] font-bold text-green-600 bg-green-50 px-2 py-0.5 rounded-full w-fit">
+                            Free Shipping
+                          </span>
+                        )}
                       </div>
                     </td>
                     <td className="px-6 py-4">

@@ -17,6 +17,7 @@ import {
   Ticket,
   ShoppingBag,
   ShoppingCart,
+  Heart,
 } from "lucide-react";
 import { clsx } from "clsx";
 import { motion, AnimatePresence } from "framer-motion";
@@ -29,10 +30,11 @@ interface UserProfile {
 
 const sidebarLinks = [
   { name: "Dashboard", path: "/dashboard", icon: LayoutDashboard },
+  { name: "Donations", path: "/donations", icon: Heart },
   { name: "Event Bookings", path: "/bookings", icon: Ticket },
+  { name: "Orders", path: "/orders", icon: ShoppingCart },
   { name: "Events", path: "/events", icon: Calendar },
   { name: "Products", path: "/products", icon: ShoppingBag },
-  { name: "Orders", path: "/orders", icon: ShoppingCart },
   { name: "Categories", path: "/categories", icon: Tags },
   { name: "Video Library", path: "/videos", icon: Video },
   { name: "Gallery", path: "/gallery", icon: ImageIcon },

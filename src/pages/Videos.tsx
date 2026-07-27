@@ -18,6 +18,7 @@ interface VideoData {
   title: string;
   description: string;
   video: string;
+  videourl?: string;
   thumbnail: string;
   categoryid: number;
   categoryname: string;
@@ -48,7 +49,7 @@ export default function Videos() {
   const [currentPage, setCurrentPage] = useState(1);
   const [loading, setLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
-  const [videoPreview, setVideoPreview] = useState<string | null>(null);
+  const [thumbnailPreview, setThumbnailPreview] = useState<string | null>(null);
 
   useEffect(() => {
     fetchVideos(currentPage);
@@ -58,7 +59,7 @@ export default function Videos() {
     if (showForm) {
       fetchCategories();
     } else {
-      setVideoPreview(null);
+      setThumbnailPreview(null);
     }
   }, [showForm]);
 
@@ -97,10 +98,11 @@ export default function Videos() {
     const title = formData.get("title") as string;
     const description = formData.get("description") as string;
     const categoryid = formData.get("categoryid") as string;
-    const file = formData.get("videoFile") as File;
+    const videourl = formData.get("videourl") as string;
+    const file = formData.get("image") as File;
 
-    if (!title || !categoryid || !file || file.size === 0) {
-      alert("Please fill all required fields and select a video.");
+    if (!title || !categoryid || !videourl) {
+      alert("Please fill all required fields.");
       return;
     }
 
@@ -110,11 +112,14 @@ export default function Videos() {
     const categoryname = selectedCat ? selectedCat.categoryname : "";
 
     const uploadData = new FormData();
-    uploadData.append("video", file);
+    if (file && file.size > 0) {
+      uploadData.append("image", file);
+    }
     uploadData.append("title", title);
     uploadData.append("description", description);
     uploadData.append("categoryid", categoryid);
     uploadData.append("categoryname", categoryname);
+    uploadData.append("videourl", videourl);
 
     setLoading(true);
     try {
@@ -241,14 +246,26 @@ export default function Videos() {
               </div>
               <div className="md:col-span-2">
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Video File *
+                  YouTube Video URL *
+                </label>
+                <input
+                  name="videourl"
+                  required
+                  type="url"
+                  className="w-full px-4 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-saffron-500/50"
+                  placeholder="https://www.youtube.com/watch?v=..."
+                />
+              </div>
+              <div className="md:col-span-2">
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Thumbnail Image (Optional)
                 </label>
                 <div className="flex items-center justify-center w-full">
                   <label className="flex flex-col items-center justify-center w-full h-48 border-2 border-dashed border-saffron-200 rounded-xl cursor-pointer bg-saffron-50/30 hover:bg-saffron-50/80 transition-colors overflow-hidden relative">
-                    {videoPreview ? (
-                      <video
-                        src={videoPreview}
-                        controls
+                    {thumbnailPreview ? (
+                      <img
+                        src={thumbnailPreview}
+                        alt="Preview"
                         className="w-full h-full object-contain bg-black"
                       />
                     ) : (
@@ -256,24 +273,23 @@ export default function Videos() {
                         <VideoIcon className="w-8 h-8 text-saffron-400 mb-2" />
                         <p className="text-sm text-gray-500">
                           <span className="font-semibold text-saffron-600">
-                            Click to upload video
+                            Click to upload thumbnail
                           </span>{" "}
                           or drag and drop
                         </p>
                       </div>
                     )}
                     <input
-                      name="videoFile"
-                      required
+                      name="image"
                       type="file"
                       className="hidden"
-                      accept="video/*"
+                      accept="image/*"
                       onChange={(e) => {
                         const file = e.target.files?.[0];
                         if (file) {
-                          setVideoPreview(URL.createObjectURL(file));
+                          setThumbnailPreview(URL.createObjectURL(file));
                         } else {
-                          setVideoPreview(null);
+                          setThumbnailPreview(null);
                         }
                       }}
                     />
@@ -356,9 +372,9 @@ export default function Videos() {
                         <div className="flex items-center justify-end gap-0 transition-opacity">
                           <a
                             href={
-                              item.video.startsWith("http")
-                                ? item.video
-                                : `http://localhost:3003${item.video}`
+                              (item.videourl || item.video || "").startsWith("http")
+                                ? (item.videourl || item.video)
+                                : `http://localhost:3003${item.videourl || item.video}`
                             }
                             target="_blank"
                             rel="noreferrer"

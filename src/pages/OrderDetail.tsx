@@ -7,6 +7,11 @@ import {
   Phone,
   ArrowLeft,
   Check,
+  X,
+  Package,
+  Truck,
+  ClipboardList,
+  CheckCircle2,
 } from "lucide-react";
 import api from "../services/api";
 
@@ -26,6 +31,8 @@ interface OrderDetailData {
     userid: number;
     addressid: number;
     screenshot: string | null;
+    subtotal: number;
+    shippingcost: number;
     totalamount: number;
     paymentstatus: string;
     orderstatus: string;
@@ -274,8 +281,26 @@ export default function OrderDetail() {
               Payment Summary
             </h3>
             <div className="space-y-4 flex-1">
-              <div className="flex justify-between items-center bg-white p-3 rounded-xl border border-gray-100">
-                <span className="text-gray-600 font-medium">Total Amount</span>
+              <div className="flex justify-between items-center border-b border-gray-200 pb-2">
+                <span className="text-gray-600 font-medium">Subtotal</span>
+                <span className="font-bold text-gray-800 text-base flex items-center gap-0.5">
+                  <IndianRupee className="w-4 h-4 text-gray-500" />
+                  {selectedOrder.order.subtotal}
+                </span>
+              </div>
+              <div className="flex justify-between items-center border-b border-gray-200 pb-2">
+                <span className="text-gray-600 font-medium">Shipping Cost</span>
+                <span className="font-bold text-gray-800 text-base flex items-center gap-0.5">
+                  {selectedOrder.order.shippingcost === 0 ? "Free" : (
+                    <>
+                      <IndianRupee className="w-4 h-4 text-gray-500" />
+                      {selectedOrder.order.shippingcost}
+                    </>
+                  )}
+                </span>
+              </div>
+              <div className="flex justify-between items-center bg-white p-3 rounded-xl border border-gray-100 mt-2">
+                <span className="text-gray-600 font-bold">Total Amount</span>
                 <span className="font-bold text-saffron-600 text-xl flex items-center gap-0.5">
                   <IndianRupee className="w-5 h-5 text-saffron-600" />
                   {selectedOrder.order.totalamount}
@@ -380,7 +405,82 @@ export default function OrderDetail() {
             )}
           </div>
         </div>
+        </div>
+
+        {/* Order Timeline */}
+        <div className="bg-white p-6 rounded-2xl shadow-elegant border border-saffron-50/50">
+          <h3 className="text-sm font-bold text-gray-800 uppercase tracking-wider flex items-center gap-2 mb-8 border-b border-gray-100 pb-3">
+            <Check className="w-4 h-4 text-saffron-500" />
+            Order Timeline
+          </h3>
+          <div className="px-2 md:px-8 py-2">
+            {selectedOrder.order.orderstatus.toLowerCase() === "cancelled" ? (
+              <div className="flex items-center gap-3 text-red-600 font-bold bg-red-50 p-4 rounded-xl border border-red-200">
+                <X className="w-6 h-6" />
+                This order has been cancelled.
+              </div>
+            ) : (
+              <div className="flex flex-col md:flex-row justify-between relative">
+                {/* Connecting line (Desktop) */}
+                <div className="hidden md:block absolute top-5 left-6 right-6 h-1 bg-gray-100 rounded-full z-0">
+                  <div 
+                    className="h-full bg-saffron-500 rounded-full transition-all duration-700"
+                    style={{
+                      width: `${
+                        Math.max(
+                          0,
+                          (["pending", "confirmed", "packed", "shipped", "delivered"].indexOf(selectedOrder.order.orderstatus.toLowerCase()) / 
+                          4) * 100
+                        )
+                      }%`
+                    }}
+                  ></div>
+                </div>
+
+                {["pending", "confirmed", "packed", "shipped", "delivered"].map((step, index) => {
+                  const currentIdx = ["pending", "confirmed", "packed", "shipped", "delivered"].indexOf(selectedOrder.order.orderstatus.toLowerCase());
+                  const isCompleted = index <= currentIdx;
+                  const isCurrent = index === currentIdx;
+
+                  let Icon = Check;
+                  if (step === "pending") Icon = ClipboardList;
+                  if (step === "confirmed") Icon = CheckCircle2;
+                  if (step === "packed") Icon = Package;
+                  if (step === "shipped") Icon = Truck;
+                  if (step === "delivered") Icon = MapPin;
+
+                  return (
+                    <div key={step} className="flex flex-row md:flex-col items-center gap-4 md:gap-3 relative z-10 mb-8 md:mb-0">
+                      {/* Mobile vertical line */}
+                      {index !== 4 && (
+                        <div className="md:hidden absolute left-5 top-10 bottom-[-32px] w-1 bg-gray-100 z-0">
+                          {isCompleted && index < currentIdx && (
+                            <div className="w-full h-full bg-saffron-500"></div>
+                          )}
+                        </div>
+                      )}
+                      
+                      <div 
+                        className={`w-10 h-10 rounded-full flex items-center justify-center border-4 ${
+                          isCompleted 
+                            ? "bg-saffron-500 border-white shadow-[0_0_0_2px_theme(colors.saffron.500)] text-white" 
+                            : "bg-white border-gray-200 text-gray-300"
+                        } transition-colors duration-300 z-10`}
+                      >
+                        <Icon className={`w-5 h-5`} />
+                      </div>
+                      <div className="md:text-center mt-0 md:mt-2">
+                        <p className={`text-sm font-bold capitalize ${isCurrent ? 'text-saffron-600' : isCompleted ? 'text-gray-800' : 'text-gray-400'}`}>
+                          {step}
+                        </p>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        </div>
       </div>
-    </div>
   );
 }
