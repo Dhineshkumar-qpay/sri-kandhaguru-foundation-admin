@@ -39,8 +39,12 @@ interface Booking {
   paymentstatus: string;
   transactionid: string | null;
   bookingstatus: string;
+  screenshot?: string | null;
   eventname: string;
   eventdate: string;
+  eventtodate?: string;
+  programtype?: string;
+  leveltype?: string;
   address: string;
   registrationfee: number;
   createdAt: string;
@@ -229,6 +233,7 @@ export default function Bookings() {
                 <th className="px-6 py-4 font-medium">Count</th>
                 <th className="px-6 py-4 font-medium">Amount</th>
                 <th className="px-6 py-4 font-medium">Payment Status</th>
+                <th className="px-6 py-4 font-medium text-center">Screenshot</th>
                 <th className="px-6 py-4 font-medium">Booking Status</th>
                 <th className="px-6 py-4 font-medium">Date</th>
               </tr>
@@ -237,7 +242,7 @@ export default function Bookings() {
               {paginatedBookings.length === 0 && !loading ? (
                 <tr>
                   <td
-                    colSpan={7}
+                    colSpan={10}
                     className="px-6 py-8 text-center text-gray-500"
                   >
                     No bookings found.
@@ -321,6 +326,22 @@ export default function Bookings() {
                       >
                         {booking.paymentstatus}
                       </span>
+                    </td>
+                    <td className="px-6 py-4 text-center">
+                      {booking.screenshot ? (
+                        <a
+                          href={`${api.defaults.baseURL?.replace('/api', '')}${booking.screenshot}`}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="inline-flex items-center justify-center p-1.5 text-saffron-500 hover:text-saffron-700 bg-saffron-50 hover:bg-saffron-100 rounded-md transition-colors"
+                          title="View Screenshot"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          <Eye className="w-4 h-4" />
+                        </a>
+                      ) : (
+                        <span className="text-gray-400 text-xs">-</span>
+                      )}
                     </td>
                     <td className="px-6 py-4">
                       <span
@@ -538,6 +559,23 @@ export default function Bookings() {
                           </span>
                         </div>
                       )}
+                      {selectedBooking.screenshot && (
+                        <div className="pt-3 border-t border-gray-200 mt-2">
+                          <p className="text-gray-600 text-sm mb-2 font-medium">Payment Screenshot</p>
+                          <a 
+                            href={`${api.defaults.baseURL?.replace('/api', '')}${selectedBooking.screenshot}`}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="block rounded-lg overflow-hidden border border-gray-200 hover:border-saffron-300 transition-colors shadow-sm"
+                          >
+                            <img 
+                              src={`${api.defaults.baseURL?.replace('/api', '')}${selectedBooking.screenshot}`}
+                              alt="Payment Proof" 
+                              className="w-full h-auto max-h-48 object-cover"
+                            />
+                          </a>
+                        </div>
+                      )}
                     </div>
                   </div>
 
@@ -546,10 +584,33 @@ export default function Bookings() {
                       Event Details
                     </p>
                     <div className="space-y-2 text-sm text-gray-700">
-                      <p>
-                        <span className="font-medium">Event Date:</span>{" "}
-                        {selectedBooking.eventdate}
-                      </p>
+                      {selectedBooking.programtype && (
+                        <p className="flex items-center gap-2">
+                          <span className="font-medium">Program Type:</span>{" "}
+                          <span className="inline-block px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-purple-100 text-purple-700 border border-purple-200 shadow-sm">
+                            {selectedBooking.programtype}
+                          </span>
+                        </p>
+                      )}
+                      
+                      {selectedBooking.leveltype === "level2" ? (
+                        <>
+                          <p>
+                            <span className="font-medium">Event From Date:</span>{" "}
+                            {selectedBooking.eventdate}
+                          </p>
+                          <p>
+                            <span className="font-medium">Event To Date:</span>{" "}
+                            {selectedBooking.eventtodate}
+                          </p>
+                        </>
+                      ) : (
+                        <p>
+                          <span className="font-medium">Event Date:</span>{" "}
+                          {selectedBooking.eventdate}
+                        </p>
+                      )}
+                      
                       <p className="flex items-center gap-2">
                         <span className="font-medium">Delivery Mode:</span>{" "}
                         <span
@@ -562,6 +623,14 @@ export default function Bookings() {
                           {selectedBooking.deliverymode}
                         </span>
                       </p>
+
+                      {selectedBooking.deliverymode === "online" && selectedBooking.bookingdate && (
+                        <p>
+                          <span className="font-medium">Booking Date (Online):</span>{" "}
+                          {selectedBooking.bookingdate}
+                        </p>
+                      )}
+
                       <p>
                         <span className="font-medium">Venue:</span>{" "}
                         {selectedBooking.address}

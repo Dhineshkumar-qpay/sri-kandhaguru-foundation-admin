@@ -7,6 +7,7 @@ import Settings from './pages/Settings';
 import Login from './pages/Login';
 import Videos from './pages/Videos';
 import Gallery from './pages/Gallery';
+import VideoTestimonials from './pages/VideoTestimonials';
 import Users from './pages/Users';
 import EventDetail from './pages/EventDetail';
 import Categories from './pages/Categories';
@@ -36,6 +37,7 @@ function App() {
           <Route path="events/:id" element={<EventDetail />} />
           <Route path="categories" element={<Categories />} />
           <Route path="videos" element={<Videos />} />
+          <Route path="video-testimonials" element={<VideoTestimonials />} />
           <Route path="gallery" element={<Gallery />} />
           <Route path="users" element={<Users />} />
           <Route path="contacts" element={<Contacts />} />

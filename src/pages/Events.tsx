@@ -94,6 +94,38 @@ export default function Events() {
   const [currentPage, setCurrentPage] = useState(1);
   const navigate = useNavigate();
 
+  const [pendingEventType, setPendingEventType] = useState<Record<number, string>>({});
+  const [updatingEventTypeId, setUpdatingEventTypeId] = useState<number | null>(null);
+
+  const handleUpdateEventType = async (id: number) => {
+    const newType = pendingEventType[id];
+    if (!newType) return;
+    setUpdatingEventTypeId(id);
+    try {
+      const response = await api.post("/event/update-eventtype", {
+        id,
+        eventtype: newType,
+      });
+      if (response.data?.success || response.status === 200 || response.status === 201) {
+        setEvents(
+          events.map((ev) => (ev.id === id ? { ...ev, eventtype: newType } : ev))
+        );
+        setPendingEventType((prev) => {
+          const next = { ...prev };
+          delete next[id];
+          return next;
+        });
+      } else {
+        alert("Failed to update event type.");
+      }
+    } catch (err) {
+      console.error("Error updating event type:", err);
+      alert("An error occurred while updating.");
+    } finally {
+      setUpdatingEventTypeId(null);
+    }
+  };
+
   useEffect(() => {
     fetchEvents(currentPage);
   }, [currentPage]);
@@ -910,6 +942,7 @@ export default function Events() {
                   <th className="px-6 py-4 font-medium">Date & Location</th>
                   <th className="px-6 py-4 font-medium">Registration Fee</th>
                   <th className="px-6 py-4 font-medium">Attendees</th>
+                  <th className="px-6 py-4 font-medium">Event Type</th>
                   <th className="px-6 py-4 font-medium text-center">Status</th>
                 </tr>
               </thead>
@@ -917,7 +950,7 @@ export default function Events() {
                 {filteredEvents.length === 0 && !loading ? (
                   <tr>
                     <td
-                      colSpan={5}
+                      colSpan={9}
                       className="px-6 py-8 text-center text-gray-500"
                     >
                       No events found.
@@ -997,27 +1030,23 @@ export default function Events() {
                             >
                               {event.title}
                             </p>
-                            {event.deliverymode === "online" ? (
-                              <p className="text-xs text-gray-500 mt-1">
-                                Delivery Mode:{" "}
-                                <span className="text-pink-600 font-bold">
-                                  {event.deliverymode}
-                                </span>{" "}
-                                | ID: {event.id}
-                              </p>
-                            ) : (
-                              <p className="text-xs text-gray-500 mt-1">
+                            <div className="text-xs text-gray-500 mt-1 flex flex-col gap-0.5">
+                              {event.deliverymode && (
+                                <p>
+                                  Delivery:{" "}
+                                  <span className={`font-bold ${event.deliverymode === "online" ? "text-pink-600" : "text-emerald-600"}`}>
+                                    {event.deliverymode}
+                                  </span>
+                                </p>
+                              )}
+                              <p>
                                 Type:{" "}
-                                <span
-                                  className={`capitalize ${getEventStatusColor(
-                                    event.eventtype,
-                                  )}`}
-                                >
+                                <span className={`capitalize font-medium ${getEventStatusColor(event.eventtype)}`}>
                                   {event.eventtype}
-                                </span>{" "}
-                                | ID: {event.id}
+                                </span>
+                                {" | "}ID: {event.id}
                               </p>
-                            )}
+                            </div>
                           </div>
                         </div>
                       </td>
@@ -1092,6 +1121,46 @@ export default function Events() {
                           <Users className="w-4 h-4 text-gray-400" />
                           {event.participants || 1}
                         </div>
+                      </td>
+                      <td className="px-6 py-4">
+                        {event.deliverymode === "online" ? (
+                          <span className="text-gray-400 text-xs">Only for Offline Events</span>
+                        ) : (
+                          <div className="flex flex-col gap-2">
+                            <select
+                              className={`text-xs border border-gray-200 rounded-lg px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-saffron-500 capitalize ${getEventStatusColor(pendingEventType[event.id] || event.eventtype)} bg-white min-w-[100px] cursor-pointer`}
+                              value={pendingEventType[event.id] || event.eventtype}
+                              onChange={(e) =>
+                                setPendingEventType({
+                                  ...pendingEventType,
+                                  [event.id]: e.target.value,
+                                })
+                              }
+                            >
+                              <option value="upcoming" className="text-orange-500">Upcoming</option>
+                              <option value="ongoing" className="text-blue-600">Ongoing</option>
+                              <option value="completed" className="text-green-600">Completed</option>
+                              <option value="cancelled" className="text-red-600">Cancelled</option>
+                            </select>
+                            {pendingEventType[event.id] &&
+                              pendingEventType[event.id] !== event.eventtype && (
+                                <button
+                                  onClick={() => handleUpdateEventType(event.id)}
+                                  disabled={updatingEventTypeId === event.id}
+                                  className="text-[10px] uppercase font-bold tracking-wider bg-saffron-500 text-white px-2 py-1 rounded-md hover:bg-saffron-600 transition-colors shadow-sm w-full cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-1"
+                                >
+                                  {updatingEventTypeId === event.id ? (
+                                    <>
+                                      <span className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
+                                      Wait
+                                    </>
+                                  ) : (
+                                    "Confirm"
+                                  )}
+                                </button>
+                              )}
+                          </div>
+                        )}
                       </td>
                       <td className="px-6 py-4 text-center">
                         <div
