@@ -253,7 +253,7 @@ export default function Orders() {
                                 item.productimage
                                   ? item.productimage.startsWith("http")
                                     ? item.productimage
-                                    : `http://localhost:3003${item.productimage}`
+                                    : `${IMAGEBASEURL}${item.productimage}`
                                   : "https://via.placeholder.com/40"
                               }
                               alt={item.productname}

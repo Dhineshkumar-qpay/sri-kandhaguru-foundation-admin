@@ -52,37 +52,134 @@ interface Booking {
 }
 
 export default function Bookings() {
-  const [bookings, setBookings] = useState<Booking[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [searchTerm, setSearchTerm] = useState("");
-  const [currentPage, setCurrentPage] = useState(1);
+  const [onlineBookings, setOnlineBookings] = useState<Booking[]>([]);
+  const [offlineBookings, setOfflineBookings] = useState<Booking[]>([]);
+  const [loadingOnline, setLoadingOnline] = useState(false);
+  const [loadingOffline, setLoadingOffline] = useState(false);
+
+  const [onlineSearchTerm, setOnlineSearchTerm] = useState("");
+  const [offlineSearchTerm, setOfflineSearchTerm] = useState("");
+  const [currentPageOnline, setCurrentPageOnline] = useState(1);
+  const [currentPageOffline, setCurrentPageOffline] = useState(1);
   const pageSize = 10;
 
   // Sidebar state
   const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [updatingStatusId, setUpdatingStatusId] = useState<number | null>(null);
+  const [sidebarStatus, setSidebarStatus] = useState<string>("");
+  const [pendingBookingStatus, setPendingBookingStatus] = useState<Record<number, string>>({});
+
+  useEffect(() => {
+    if (selectedBooking) {
+      setSidebarStatus(selectedBooking.bookingstatus);
+    }
+  }, [selectedBooking]);
+
+  const handleSidebarStatusUpdate = async () => {
+    if (!selectedBooking) return;
+
+    setUpdatingStatusId(selectedBooking.id);
+    try {
+      const response = await api.post("/booking/update-bookingstatus", {
+        id: selectedBooking.id,
+        bookingstatus: sidebarStatus,
+      });
+
+      if (response.data?.success) {
+        setOnlineBookings((prev) =>
+          prev.map((b) =>
+            b.id === selectedBooking.id
+              ? { ...b, bookingstatus: sidebarStatus }
+              : b,
+          ),
+        );
+        setOfflineBookings((prev) =>
+          prev.map((b) =>
+            b.id === selectedBooking.id
+              ? { ...b, bookingstatus: sidebarStatus }
+              : b,
+          ),
+        );
+
+        setSelectedBooking({
+          ...selectedBooking,
+          bookingstatus: sidebarStatus,
+        });
+        alert("Booking status updated successfully!");
+      } else {
+        alert("Failed to update status");
+      }
+    } catch (error) {
+      console.error("Failed to update booking status", error);
+      alert("Failed to update booking status. Please try again.");
+    } finally {
+      setUpdatingStatusId(null);
+    }
+  };
+
+  const handleStatusUpdate = async (id: number, newStatus: string) => {
+    setUpdatingStatusId(id);
+    try {
+      const response = await api.post("/booking/update-bookingstatus", {
+        id,
+        bookingstatus: newStatus,
+      });
+
+      if (response.data?.success) {
+        setOnlineBookings((prev) =>
+          prev.map((b) =>
+            b.id === id ? { ...b, bookingstatus: newStatus } : b,
+          ),
+        );
+        setOfflineBookings((prev) =>
+          prev.map((b) =>
+            b.id === id ? { ...b, bookingstatus: newStatus } : b,
+          ),
+        );
+
+        setPendingBookingStatus((prev) => {
+          const next = { ...prev };
+          delete next[id];
+          return next;
+        });
+
+        if (selectedBooking?.id === id) {
+          setSelectedBooking({ ...selectedBooking, bookingstatus: newStatus });
+        }
+      }
+    } catch (error) {
+      console.error("Failed to update booking status", error);
+      alert("Failed to update booking status");
+    } finally {
+      setUpdatingStatusId(null);
+    }
+  };
 
   const [events, setEvents] = useState<
     { id: number; title: string; city: string; deliverymode: string }[]
   >([]);
-  const [selectedEventId, setSelectedEventId] = useState<string>("");
-  const [startDate, setStartDate] = useState<string>("");
-  const [endDate, setEndDate] = useState<string>("");
-  const [deliveryMode, setDeliveryMode] = useState<string>("");
+
+  const [onlineEventId, setOnlineEventId] = useState<string>("");
+  const [onlineStartDate, setOnlineStartDate] = useState<string>("");
+  const [onlineEndDate, setOnlineEndDate] = useState<string>("");
+
+  const [offlineEventId, setOfflineEventId] = useState<string>("");
+  const [offlineStartDate, setOfflineStartDate] = useState<string>("");
+  const [offlineEndDate, setOfflineEndDate] = useState<string>("");
 
   useEffect(() => {
     fetchEventsList();
   }, []);
 
   useEffect(() => {
-    fetchBookings();
+    fetchOnlineBookings();
+    fetchOfflineBookings();
   }, []);
 
   const fetchEventsList = async () => {
     try {
-      const response = await api.post("/event/get", {
-        deliverymode: "",
-      });
+      const response = await api.post("/event/get", { deliverymode: "" });
       if (response.data?.success) {
         setEvents(response.data.data.events || []);
       }
@@ -91,50 +188,94 @@ export default function Bookings() {
     }
   };
 
-  const fetchBookings = async () => {
-    setLoading(true);
+  const fetchOnlineBookings = async () => {
+    setLoadingOnline(true);
     try {
       const response = await api.post("/booking/get", {
-        eventid: selectedEventId ? Number(selectedEventId) : null,
-        startdate: startDate || null,
-        enddate: endDate || null,
-        deliverymode: deliveryMode || null,
+        eventid: onlineEventId ? Number(onlineEventId) : null,
+        startdate: onlineStartDate || null,
+        enddate: onlineEndDate || null,
+        deliverymode: "online",
       });
       if (response.data?.success) {
-        setBookings(response.data.data || []);
+        setOnlineBookings(response.data.data || []);
       }
     } catch (error) {
-      console.error("Failed to fetch bookings", error);
+      console.error("Failed to fetch online bookings", error);
     } finally {
-      setLoading(false);
+      setLoadingOnline(false);
     }
   };
 
-  const filteredBookings = bookings.filter(
+  const fetchOfflineBookings = async () => {
+    setLoadingOffline(true);
+    try {
+      const response = await api.post("/booking/get", {
+        eventid: offlineEventId ? Number(offlineEventId) : null,
+        startdate: offlineStartDate || null,
+        enddate: offlineEndDate || null,
+        deliverymode: "offline",
+      });
+      if (response.data?.success) {
+        setOfflineBookings(response.data.data || []);
+      }
+    } catch (error) {
+      console.error("Failed to fetch offline bookings", error);
+    } finally {
+      setLoadingOffline(false);
+    }
+  };
+
+  const filteredOnlineBookings = onlineBookings.filter(
     (b) =>
-      b.fullname.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      b.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      b.phone.includes(searchTerm),
+      b.fullname.toLowerCase().includes(onlineSearchTerm.toLowerCase()) ||
+      b.email.toLowerCase().includes(onlineSearchTerm.toLowerCase()) ||
+      b.phone.includes(onlineSearchTerm),
   );
 
-  const totalItems = filteredBookings.length;
-  const totalPages = Math.max(1, Math.ceil(totalItems / pageSize));
+  const filteredOfflineBookings = offlineBookings.filter(
+    (b) =>
+      b.fullname.toLowerCase().includes(offlineSearchTerm.toLowerCase()) ||
+      b.email.toLowerCase().includes(offlineSearchTerm.toLowerCase()) ||
+      b.phone.includes(offlineSearchTerm),
+  );
+
+  const totalOnlineItems = filteredOnlineBookings.length;
+  const totalOnlinePages = Math.max(1, Math.ceil(totalOnlineItems / pageSize));
+
+  const totalOfflineItems = filteredOfflineBookings.length;
+  const totalOfflinePages = Math.max(
+    1,
+    Math.ceil(totalOfflineItems / pageSize),
+  );
 
   useEffect(() => {
-    if (currentPage > totalPages && totalPages > 0) {
-      setCurrentPage(totalPages);
+    if (currentPageOnline > totalOnlinePages && totalOnlinePages > 0) {
+      setCurrentPageOnline(totalOnlinePages);
     }
-  }, [totalPages, currentPage]);
+  }, [totalOnlinePages, currentPageOnline]);
 
-  const paginatedBookings = filteredBookings.slice(
-    (currentPage - 1) * pageSize,
-    currentPage * pageSize,
+  useEffect(() => {
+    if (currentPageOffline > totalOfflinePages && totalOfflinePages > 0) {
+      setCurrentPageOffline(totalOfflinePages);
+    }
+  }, [totalOfflinePages, currentPageOffline]);
+
+  const paginatedOnlineBookings = filteredOnlineBookings.slice(
+    (currentPageOnline - 1) * pageSize,
+    currentPageOnline * pageSize,
+  );
+
+  const paginatedOfflineBookings = filteredOfflineBookings.slice(
+    (currentPageOffline - 1) * pageSize,
+    currentPageOffline * pageSize,
   );
 
   const getStatusColor = (status: string) => {
     switch (status.toLowerCase()) {
       case "success":
       case "completed":
+      case "confirmed":
         return "bg-emerald-100 text-emerald-700";
       case "pending":
         return "bg-amber-100 text-amber-700";
@@ -145,6 +286,319 @@ export default function Bookings() {
         return "bg-gray-100 text-gray-700";
     }
   };
+
+  const renderFilters = (
+    type: string,
+    searchTerm: string,
+    setSearchTerm: (v: string) => void,
+    eventId: string,
+    setEventId: (v: string) => void,
+    startDate: string,
+    setStartDate: (v: string) => void,
+    endDate: string,
+    setEndDate: (v: string) => void,
+    onFetch: () => void,
+    setCurrentPage: (v: number) => void,
+  ) => (
+    <div className="p-4 border-b border-gray-100 flex flex-col md:flex-row flex-wrap justify-between items-center gap-4 bg-gray-50/50 mt-4 first:mt-0">
+      <div className="relative w-full md:max-w-xs">
+        <Search className="w-5 h-5 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+        <input
+          type="text"
+          placeholder={`Search ${type} by name, email, or phone...`}
+          value={searchTerm}
+          onChange={(e) => {
+            setSearchTerm(e.target.value);
+            setCurrentPage(1);
+          }}
+          className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-saffron-500/50 transition-all text-sm"
+        />
+      </div>
+      <div className="flex flex-col sm:flex-row gap-3 w-full md:w-auto">
+        <select
+          value={eventId}
+          onChange={(e) => setEventId(e.target.value)}
+          className="px-4 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-saffron-500/50 text-sm bg-white"
+        >
+          <option value="">All Events</option>
+          {events
+            .filter((ev) =>
+              type === "Online"
+                ? ev.deliverymode === "online"
+                : ev.deliverymode !== "online",
+            )
+            .map((ev) => (
+              <option key={ev.id} value={ev.id}>
+                {ev.title} - {ev.city == "" ? "Online" : ev.city}
+              </option>
+            ))}
+        </select>
+        <input
+          type="date"
+          value={startDate}
+          onChange={(e) => setStartDate(e.target.value)}
+          className="px-4 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-saffron-500/50 text-sm bg-white"
+          title="Start Date"
+        />
+        <input
+          type="date"
+          value={endDate}
+          onChange={(e) => setEndDate(e.target.value)}
+          className="px-4 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-saffron-500/50 text-sm bg-white"
+          title="End Date"
+        />
+        <button
+          onClick={onFetch}
+          className="px-6 py-2 bg-saffron-500 text-white rounded-xl hover:bg-saffron-600 font-medium transition-colors shadow-sm text-sm cursor-pointer"
+        >
+          Fetch
+        </button>
+      </div>
+    </div>
+  );
+
+  const renderTable = (
+    title: string,
+    paginatedData: Booking[],
+    totalItems: number,
+    currentPage: number,
+    totalPages: number,
+    setCurrentPage: React.Dispatch<React.SetStateAction<number>>,
+  ) => (
+    <div className="mt-6 border-t border-gray-100 pt-6">
+      <h2 className="text-xl font-bold text-gray-800 mb-4 px-4">
+        {title} Bookings
+      </h2>
+      <div className="overflow-x-auto relative min-h-[300px]">
+        {((title === "Online" && loadingOnline) ||
+          (title === "Offline" && loadingOffline)) && (
+          <div className="absolute inset-0 bg-white/60 backdrop-blur-sm z-10 flex items-center justify-center">
+            <div className="w-8 h-8 border-4 border-saffron-500 border-t-transparent rounded-full animate-spin"></div>
+          </div>
+        )}
+        <table className="w-full text-left border-collapse min-w-[1000px]">
+          <thead>
+            <tr className="bg-gray-50/50 border-b border-gray-100 text-gray-500 text-sm">
+              <th className="px-6 py-4 font-medium">S.No</th>
+              <th className="px-6 py-4 font-medium text-right">Actions</th>
+              <th className="px-6 py-4 font-medium">Participant</th>
+              <th className="px-6 py-4 font-medium">Eventname</th>
+              <th className="px-6 py-4 font-medium">Count</th>
+              <th className="px-6 py-4 font-medium">Amount</th>
+              <th className="px-6 py-4 font-medium text-center">Screenshot</th>
+              <th className="px-6 py-4 font-medium">Booking Status</th>
+              <th className="px-6 py-4 font-medium">
+                {title === "Online" ? "Booking Date" : "Date"}
+              </th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-gray-100">
+            {paginatedData.length === 0 &&
+            !(
+              (title === "Online" && loadingOnline) ||
+              (title === "Offline" && loadingOffline)
+            ) ? (
+              <tr>
+                <td
+                  colSpan={10}
+                  className="px-6 py-8 text-center text-gray-500"
+                >
+                  No bookings found.
+                </td>
+              </tr>
+            ) : (
+              paginatedData.map((booking, index) => (
+                <tr
+                  key={booking.id}
+                  className="hover:bg-saffron-50/30 transition-colors group"
+                >
+                  <td className="px-6 py-4">
+                    <span className="flex h-9 w-9 items-center justify-center rounded-full bg-orange-100 text-sm font-bold text-orange-600 ring-orange-200">
+                      {(currentPage - 1) * pageSize + index + 1}
+                    </span>
+                  </td>
+                  <td className="px-6 py-4 text-right">
+                    <button
+                      onClick={() => {
+                        setSelectedBooking(booking);
+                        setIsSidebarOpen(true);
+                      }}
+                      className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg cursor-pointer transition-colors"
+                      title="View Details"
+                    >
+                      <Eye className="w-4 h-4" />
+                    </button>
+                  </td>
+                  <td className="px-6 py-4">
+                    <p className="font-semibold text-gray-800 text-md">
+                      {booking.fullname}
+                    </p>
+                    <div className="flex items-center gap-2 mt-1 text-sm text-gray-500">
+                      <Mail className="w-4 h-4 shrink-0" />
+                      <span className="truncate max-w-[150px]">
+                        {booking.email}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-2 mt-1 text-sm text-gray-500">
+                      <Phone className="w-4 h-4 shrink-0" />
+                      <span>{booking.phone}</span>
+                    </div>
+                  </td>
+                  <td className="px-6 py-4 w-[200px]">
+                    <p className="w-[180px] text-sm font-semibold text-gray-800 line-clamp-3 break-words">
+                      {booking.eventname}
+                    </p>
+                    {booking.deliverymode && (
+                      <p className="mt-2">
+                        <span
+                          className={`inline-block px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${booking.deliverymode === "online" ? "bg-pink-100 text-pink-700 border border-pink-200" : "bg-emerald-100 text-emerald-700 border border-emerald-200"}`}
+                        >
+                          {booking.deliverymode}
+                        </span>
+                      </p>
+                    )}
+                  </td>
+                  <td className="px-6 py-4">
+                    <div className="flex items-center gap-2 text-sm text-gray-600">
+                      <Users className="w-4 h-4 text-gray-400" />
+                      <span className="font-semibold">
+                        {booking.participants}
+                      </span>{" "}
+                      Total
+                    </div>
+                    <div className="text-xs text-gray-500 mt-1">
+                      ({booking.adultcount} Adults, {booking.childrencount}{" "}
+                      Children)
+                    </div>
+                  </td>
+                  <td className="px-6 py-4 font-semibold text-gray-800">
+                    ₹{booking.totalamount}
+                  </td>
+                  <td className="px-6 py-4 text-center">
+                    {booking.screenshot ? (
+                      <a
+                        href={`${api.defaults.baseURL?.replace("/api", "")}${booking.screenshot}`}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="inline-flex items-center justify-center p-1.5 text-saffron-500 hover:text-saffron-700 bg-saffron-50 hover:bg-saffron-100 rounded-md transition-colors"
+                        title="View Screenshot"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <Eye className="w-4 h-4" />
+                      </a>
+                    ) : (
+                      <span className="text-gray-400 text-xs">-</span>
+                    )}
+                  </td>
+                  <td className="px-6 py-4">
+                    <div className="flex flex-col gap-2">
+                      <select
+                        className={`text-xs border border-gray-200 rounded-lg px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-saffron-500 capitalize bg-white min-w-[100px] cursor-pointer ${
+                          pendingBookingStatus[booking.id] || booking.bookingstatus === "success" || pendingBookingStatus[booking.id] || booking.bookingstatus === "completed" || pendingBookingStatus[booking.id] || booking.bookingstatus === "confirmed" ? "text-emerald-600" :
+                          pendingBookingStatus[booking.id] || booking.bookingstatus === "pending" ? "text-amber-600" : "text-red-600"
+                        }`}
+                        value={pendingBookingStatus[booking.id] || booking.bookingstatus}
+                        onChange={(e) =>
+                          setPendingBookingStatus({
+                            ...pendingBookingStatus,
+                            [booking.id]: e.target.value,
+                          })
+                        }
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <option value="pending" className="text-amber-600">Pending</option>
+                        <option value="confirmed" className="text-emerald-600">Confirmed</option>
+                        <option value="cancelled" className="text-red-600">Cancelled</option>
+                      </select>
+                      {pendingBookingStatus[booking.id] &&
+                        pendingBookingStatus[booking.id] !== booking.bookingstatus && (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleStatusUpdate(booking.id, pendingBookingStatus[booking.id]);
+                            }}
+                            disabled={updatingStatusId === booking.id}
+                            className="text-[10px] uppercase font-bold tracking-wider bg-saffron-500 text-white px-2 py-1 rounded-md hover:bg-saffron-600 transition-colors shadow-sm w-full cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-1"
+                          >
+                            {updatingStatusId === booking.id ? (
+                              <>
+                                <span className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
+                                Wait
+                              </>
+                            ) : (
+                              "Confirm"
+                            )}
+                          </button>
+                        )}
+                    </div>
+                  </td>
+                  <td className="px-6 py-4">
+                    <div className="flex items-center gap-2 text-sm text-gray-600">
+                      <Calendar className="w-4 h-4 text-saffron-500 shrink-0" />
+                      <span className="whitespace-nowrap">
+                        {(
+                          title === "Online"
+                            ? booking.bookingdate
+                            : booking.createdAt
+                        )
+                          ? new Date(
+                              (title === "Online"
+                                ? booking.bookingdate
+                                : booking.createdAt) as string,
+                            ).toLocaleDateString("en-US", {
+                              month: "short",
+                              day: "numeric",
+                              year: "numeric",
+                            })
+                          : "-"}
+                      </span>
+                    </div>
+                  </td>
+                </tr>
+              ))
+            )}
+          </tbody>
+        </table>
+      </div>
+
+      {totalItems > 0 && (
+        <div className="p-4 flex flex-col sm:flex-row items-center justify-between gap-4 text-sm text-gray-500 bg-gray-50/50">
+          <p>
+            Showing {(currentPage - 1) * pageSize + 1} to{" "}
+            {Math.min(currentPage * pageSize, totalItems)} of {totalItems}{" "}
+            entries
+          </p>
+          <div className="flex gap-1 overflow-x-auto">
+            <button
+              onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+              disabled={currentPage === 1}
+              className="px-3 py-1 border border-gray-200 rounded-md hover:bg-gray-100 disabled:opacity-50 disabled:hover:bg-transparent transition-colors cursor-pointer"
+            >
+              Prev
+            </button>
+            {Array.from({ length: totalPages }, (_, i) => i + 1).map(
+              (pageNum) => (
+                <button
+                  key={pageNum}
+                  onClick={() => setCurrentPage(pageNum)}
+                  className={`px-3 py-1 rounded-md transition-colors cursor-pointer ${pageNum === currentPage ? "bg-saffron-500 text-white shadow-sm" : "border border-gray-200 hover:bg-gray-100"}`}
+                >
+                  {pageNum}
+                </button>
+              ),
+            )}
+            <button
+              onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+              disabled={currentPage === totalPages}
+              className="px-3 py-1 border border-gray-200 rounded-md hover:bg-gray-100 disabled:opacity-50 disabled:hover:bg-transparent transition-colors cursor-pointer"
+            >
+              Next
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
 
   return (
     <div className="space-y-6 relative">
@@ -158,261 +612,50 @@ export default function Bookings() {
       </div>
 
       <div className="bg-white rounded-2xl shadow-elegant border border-saffron-50/50 overflow-hidden">
-        <div className="p-4 border-b border-gray-100 flex flex-col md:flex-row flex-wrap justify-between items-center gap-4 bg-gray-50/50">
-          <div className="relative w-full md:max-w-xs">
-            <Search className="w-5 h-5 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-            <input
-              type="text"
-              placeholder="Search by name, email, or phone..."
-              value={searchTerm}
-              onChange={(e) => {
-                setSearchTerm(e.target.value);
-                setCurrentPage(1);
-              }}
-              className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-saffron-500/50 transition-all text-sm"
-            />
-          </div>
-          <div className="flex flex-col sm:flex-row gap-3 w-full md:w-auto">
-            <select
-              value={selectedEventId}
-              onChange={(e) => setSelectedEventId(e.target.value)}
-              className="px-4 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-saffron-500/50 text-sm bg-white"
-            >
-              <option value="">All Events</option>
-              {events.map((ev) => (
-                <option key={ev.id} value={ev.id}>
-                  {ev.title} - {ev.city == "" ? "Online" : ev.city}
-                </option>
-              ))}
-            </select>
-            <select
-              value={deliveryMode}
-              onChange={(e) => setDeliveryMode(e.target.value)}
-              className="px-4 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-saffron-500/50 text-sm bg-white"
-            >
-              <option value="">All</option>
-              <option value="online">Online</option>
-              <option value="offline">Offline</option>
-            </select>
-            <input
-              type="date"
-              value={startDate}
-              onChange={(e) => setStartDate(e.target.value)}
-              className="px-4 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-saffron-500/50 text-sm bg-white"
-              title="Start Date"
-            />
-            <input
-              type="date"
-              value={endDate}
-              onChange={(e) => setEndDate(e.target.value)}
-              className="px-4 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-saffron-500/50 text-sm bg-white"
-              title="End Date"
-            />
-            <button
-              onClick={fetchBookings}
-              className="px-6 py-2 bg-saffron-500 text-white rounded-xl hover:bg-saffron-600 font-medium transition-colors shadow-sm text-sm cursor-pointer"
-            >
-              Fetch
-            </button>
-          </div>
-        </div>
+        {renderFilters(
+          "Online",
+          onlineSearchTerm,
+          setOnlineSearchTerm,
+          onlineEventId,
+          setOnlineEventId,
+          onlineStartDate,
+          setOnlineStartDate,
+          onlineEndDate,
+          setOnlineEndDate,
+          fetchOnlineBookings,
+          setCurrentPageOnline,
+        )}
+        {renderTable(
+          "Online",
+          paginatedOnlineBookings,
+          totalOnlineItems,
+          currentPageOnline,
+          totalOnlinePages,
+          setCurrentPageOnline,
+        )}
+      </div>
 
-        <div className="overflow-x-auto relative min-h-[300px]">
-          {loading && (
-            <div className="absolute inset-0 bg-white/60 backdrop-blur-sm z-10 flex items-center justify-center">
-              <div className="w-8 h-8 border-4 border-saffron-500 border-t-transparent rounded-full animate-spin"></div>
-            </div>
-          )}
-          <table className="w-full text-left border-collapse min-w-[1000px]">
-            <thead>
-              <tr className="bg-gray-50/50 border-b border-gray-100 text-gray-500 text-sm">
-                <th className="px-6 py-4 font-medium">S.No</th>
-                <th className="px-6 py-4 font-medium text-right">Actions</th>
-                <th className="px-6 py-4 font-medium">Participant</th>
-                <th className="px-6 py-4 font-medium">Eventname</th>
-                <th className="px-6 py-4 font-medium">Count</th>
-                <th className="px-6 py-4 font-medium">Amount</th>
-                <th className="px-6 py-4 font-medium">Payment Status</th>
-                <th className="px-6 py-4 font-medium text-center">Screenshot</th>
-                <th className="px-6 py-4 font-medium">Booking Status</th>
-                <th className="px-6 py-4 font-medium">Date</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-100">
-              {paginatedBookings.length === 0 && !loading ? (
-                <tr>
-                  <td
-                    colSpan={10}
-                    className="px-6 py-8 text-center text-gray-500"
-                  >
-                    No bookings found.
-                  </td>
-                </tr>
-              ) : (
-                paginatedBookings.map((booking, index) => (
-                  <tr
-                    key={booking.id}
-                    className="hover:bg-saffron-50/30 transition-colors group"
-                  >
-                    <td className="px-6 py-4">
-                      <span className="flex h-9 w-9 items-center justify-center rounded-full bg-orange-100 text-sm font-bold text-orange-600 ring-orange-200">
-                        {(currentPage - 1) * pageSize + index + 1}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 text-right">
-                      <button
-                        onClick={() => {
-                          setSelectedBooking(booking);
-                          setIsSidebarOpen(true);
-                        }}
-                        className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg cursor-pointer transition-colors"
-                        title="View Details"
-                      >
-                        <Eye className="w-4 h-4" />
-                      </button>
-                    </td>
-                    <td className="px-6 py-4">
-                      <p className="font-semibold text-gray-800 text-md">
-                        {booking.fullname}
-                      </p>
-                      <div className="flex items-center gap-2 mt-1 text-sm text-gray-500">
-                        <Mail className="w-4 h-4 shrink-0" />
-                        <span className="truncate max-w-[150px]">
-                          {booking.email}
-                        </span>
-                      </div>
-                      <div className="flex items-center gap-2 mt-1 text-sm text-gray-500">
-                        <Phone className="w-4 h-4 shrink-0" />
-                        <span>{booking.phone}</span>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 w-[200px]">
-                      <p className="w-[180px] text-sm font-semibold text-gray-800 line-clamp-3 break-words">
-                        {booking.eventname}
-                      </p>
-                      {booking.deliverymode && (
-                        <p className="mt-2">
-                          <span
-                            className={`inline-block px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${
-                              booking.deliverymode === "online"
-                                ? "bg-pink-100 text-pink-700 border border-pink-200"
-                                : "bg-emerald-100 text-emerald-700 border border-emerald-200"
-                            }`}
-                          >
-                            {booking.deliverymode}
-                          </span>
-                        </p>
-                      )}
-                    </td>
-                    <td className="px-6 py-4">
-                      <div className="flex items-center gap-2 text-sm text-gray-600">
-                        <Users className="w-4 h-4 text-gray-400" />
-                        <span className="font-semibold">
-                          {booking.participants}
-                        </span>{" "}
-                        Total
-                      </div>
-                      <div className="text-xs text-gray-500 mt-1">
-                        ({booking.adultcount} Adults, {booking.childrencount}{" "}
-                        Children)
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 font-semibold text-gray-800">
-                      ₹{booking.totalamount}
-                    </td>
-                    <td className="px-6 py-4">
-                      <span
-                        className={`inline-block px-3 py-1 rounded-full text-xs font-semibold capitalize ${getStatusColor(booking.paymentstatus)}`}
-                      >
-                        {booking.paymentstatus}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 text-center">
-                      {booking.screenshot ? (
-                        <a
-                          href={`${api.defaults.baseURL?.replace('/api', '')}${booking.screenshot}`}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="inline-flex items-center justify-center p-1.5 text-saffron-500 hover:text-saffron-700 bg-saffron-50 hover:bg-saffron-100 rounded-md transition-colors"
-                          title="View Screenshot"
-                          onClick={(e) => e.stopPropagation()}
-                        >
-                          <Eye className="w-4 h-4" />
-                        </a>
-                      ) : (
-                        <span className="text-gray-400 text-xs">-</span>
-                      )}
-                    </td>
-                    <td className="px-6 py-4">
-                      <span
-                        className={`inline-block px-3 py-1 rounded-full text-xs font-semibold capitalize ${getStatusColor(booking.bookingstatus)}`}
-                      >
-                        {booking.bookingstatus}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4">
-                      <div className="flex items-center gap-2 text-sm text-gray-600">
-                        <Calendar className="w-4 h-4 text-saffron-500 shrink-0" />
-                        <span className="whitespace-nowrap">
-                          {new Date(booking.createdAt).toLocaleDateString(
-                            "en-US",
-                            {
-                              month: "short",
-                              day: "numeric",
-                              year: "numeric",
-                            },
-                          )}
-                        </span>
-                      </div>
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
-
-        {totalItems > 0 && (
-          <div className="p-4 border-t border-gray-100 flex flex-col sm:flex-row items-center justify-between gap-4 text-sm text-gray-500 bg-gray-50/50">
-            <p>
-              Showing {(currentPage - 1) * pageSize + 1} to{" "}
-              {Math.min(currentPage * pageSize, totalItems)} of {totalItems}{" "}
-              entries
-            </p>
-            <div className="flex gap-1 overflow-x-auto">
-              <button
-                onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-                disabled={currentPage === 1}
-                className="px-3 py-1 border border-gray-200 rounded-md hover:bg-gray-100 disabled:opacity-50 disabled:hover:bg-transparent transition-colors cursor-pointer"
-              >
-                Prev
-              </button>
-              {Array.from({ length: totalPages }, (_, i) => i + 1).map(
-                (pageNum) => (
-                  <button
-                    key={pageNum}
-                    onClick={() => setCurrentPage(pageNum)}
-                    className={`px-3 py-1 rounded-md transition-colors cursor-pointer ${
-                      pageNum === currentPage
-                        ? "bg-saffron-500 text-white shadow-sm"
-                        : "border border-gray-200 hover:bg-gray-100"
-                    }`}
-                  >
-                    {pageNum}
-                  </button>
-                ),
-              )}
-              <button
-                onClick={() =>
-                  setCurrentPage((p) => Math.min(totalPages, p + 1))
-                }
-                disabled={currentPage === totalPages}
-                className="px-3 py-1 border border-gray-200 rounded-md hover:bg-gray-100 disabled:opacity-50 disabled:hover:bg-transparent transition-colors cursor-pointer"
-              >
-                Next
-              </button>
-            </div>
-          </div>
+      <div className="bg-white rounded-2xl shadow-elegant border border-saffron-50/50 overflow-hidden mt-8">
+        {renderFilters(
+          "Offline",
+          offlineSearchTerm,
+          setOfflineSearchTerm,
+          offlineEventId,
+          setOfflineEventId,
+          offlineStartDate,
+          setOfflineStartDate,
+          offlineEndDate,
+          setOfflineEndDate,
+          fetchOfflineBookings,
+          setCurrentPageOffline,
+        )}
+        {renderTable(
+          "Offline",
+          paginatedOfflineBookings,
+          totalOfflineItems,
+          currentPageOffline,
+          totalOfflinePages,
+          setCurrentPageOffline,
         )}
       </div>
 
@@ -492,12 +735,22 @@ export default function Bookings() {
                     </div>
                     <div className="text-right">
                       <p className="text-sm font-semibold text-gray-500 mb-1 uppercase tracking-wider">
-                        Date
+                        {selectedBooking.deliverymode === "online"
+                          ? "Booking Date"
+                          : "Date"}
                       </p>
                       <p className="text-gray-800 font-medium">
-                        {new Date(
-                          selectedBooking.createdAt,
-                        ).toLocaleDateString()}
+                        {(
+                          selectedBooking.deliverymode === "online"
+                            ? selectedBooking.bookingdate
+                            : selectedBooking.createdAt
+                        )
+                          ? new Date(
+                              (selectedBooking.deliverymode === "online"
+                                ? selectedBooking.bookingdate
+                                : selectedBooking.createdAt) as string,
+                            ).toLocaleDateString()
+                          : "-"}
                       </p>
                     </div>
                   </div>
@@ -561,16 +814,18 @@ export default function Bookings() {
                       )}
                       {selectedBooking.screenshot && (
                         <div className="pt-3 border-t border-gray-200 mt-2">
-                          <p className="text-gray-600 text-sm mb-2 font-medium">Payment Screenshot</p>
-                          <a 
-                            href={`${api.defaults.baseURL?.replace('/api', '')}${selectedBooking.screenshot}`}
+                          <p className="text-gray-600 text-sm mb-2 font-medium">
+                            Payment Screenshot
+                          </p>
+                          <a
+                            href={`${api.defaults.baseURL?.replace("/api", "")}${selectedBooking.screenshot}`}
                             target="_blank"
                             rel="noreferrer"
                             className="block rounded-lg overflow-hidden border border-gray-200 hover:border-saffron-300 transition-colors shadow-sm"
                           >
-                            <img 
-                              src={`${api.defaults.baseURL?.replace('/api', '')}${selectedBooking.screenshot}`}
-                              alt="Payment Proof" 
+                            <img
+                              src={`${api.defaults.baseURL?.replace("/api", "")}${selectedBooking.screenshot}`}
+                              alt="Payment Proof"
                               className="w-full h-auto max-h-48 object-cover"
                             />
                           </a>
@@ -592,11 +847,13 @@ export default function Bookings() {
                           </span>
                         </p>
                       )}
-                      
+
                       {selectedBooking.leveltype === "level2" ? (
                         <>
                           <p>
-                            <span className="font-medium">Event From Date:</span>{" "}
+                            <span className="font-medium">
+                              Event From Date:
+                            </span>{" "}
                             {selectedBooking.eventdate}
                           </p>
                           <p>
@@ -610,7 +867,7 @@ export default function Bookings() {
                           {selectedBooking.eventdate}
                         </p>
                       )}
-                      
+
                       <p className="flex items-center gap-2">
                         <span className="font-medium">Delivery Mode:</span>{" "}
                         <span
@@ -624,12 +881,15 @@ export default function Bookings() {
                         </span>
                       </p>
 
-                      {selectedBooking.deliverymode === "online" && selectedBooking.bookingdate && (
-                        <p>
-                          <span className="font-medium">Booking Date (Online):</span>{" "}
-                          {selectedBooking.bookingdate}
-                        </p>
-                      )}
+                      {selectedBooking.deliverymode === "online" &&
+                        selectedBooking.bookingdate && (
+                          <p>
+                            <span className="font-medium">
+                              Booking Date (Online):
+                            </span>{" "}
+                            {selectedBooking.bookingdate}
+                          </p>
+                        )}
 
                       <p>
                         <span className="font-medium">Venue:</span>{" "}
@@ -669,6 +929,43 @@ export default function Bookings() {
                       </p>
                     </div>
                   )}
+
+                  <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm mt-6">
+                    <p className="text-sm font-semibold text-gray-800 mb-3 uppercase tracking-wider border-b border-gray-100 pb-2">
+                      Update Booking Status
+                    </p>
+                    <div className="space-y-3">
+                      <div>
+                        <label className="block text-xs text-gray-500 mb-1">
+                          Select Status
+                        </label>
+                        <select
+                          value={sidebarStatus}
+                          onChange={(e) => setSidebarStatus(e.target.value)}
+                          disabled={updatingStatusId === selectedBooking.id}
+                          className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-saffron-500/50 text-sm bg-gray-50 capitalize"
+                        >
+                          <option value="pending">Pending</option>
+                          <option value="confirmed">Confirmed</option>
+                          <option value="cancelled">Cancelled</option>
+                        </select>
+                      </div>
+                      <button
+                        onClick={handleSidebarStatusUpdate}
+                        disabled={updatingStatusId === selectedBooking.id}
+                        className="w-full py-2 bg-saffron-500 hover:bg-saffron-600 text-white rounded-lg text-sm font-medium transition-colors flex justify-center items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        {updatingStatusId === selectedBooking.id ? (
+                          <>
+                            <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                            Updating...
+                          </>
+                        ) : (
+                          "Update Status"
+                        )}
+                      </button>
+                    </div>
+                  </div>
                 </div>
               </div>
             </motion.div>

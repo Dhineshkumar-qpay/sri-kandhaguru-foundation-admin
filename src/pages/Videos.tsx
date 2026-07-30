@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { IMAGEBASEURL } from "../services/api";
 import {
   Plus,
   Search,
@@ -374,7 +375,7 @@ export default function Videos() {
                             href={
                               (item.videourl || item.video || "").startsWith("http")
                                 ? (item.videourl || item.video)
-                                : `http://localhost:3003${item.videourl || item.video}`
+                                : `${IMAGEBASEURL}${item.videourl || item.video}`
                             }
                             target="_blank"
                             rel="noreferrer"
@@ -400,7 +401,7 @@ export default function Videos() {
                                 src={
                                   item.thumbnail.startsWith("http")
                                     ? item.thumbnail
-                                    : `http://localhost:3003${item.thumbnail}`
+                                    : `${IMAGEBASEURL}${item.thumbnail}`
                                 }
                                 alt={item.title}
                                 className="w-full h-full object-cover"

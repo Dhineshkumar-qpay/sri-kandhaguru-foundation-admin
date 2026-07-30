@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { IMAGEBASEURL } from "../services/api";
 import {
   Plus,
   Search,
@@ -357,7 +358,7 @@ export default function Gallery() {
                           src={
                             item.image.startsWith("http")
                               ? item.image
-                              : `http://localhost:3003${item.image}`
+                              : `${IMAGEBASEURL}${item.image}`
                           }
                           alt={item.title}
                           className="w-10 h-10 rounded-lg object-cover shadow-sm border border-gray-100 bg-gray-100"

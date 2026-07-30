@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { IMAGEBASEURL } from "../services/api";
 import { useNavigate } from "react-router-dom";
 import {
   Plus,
@@ -78,7 +79,13 @@ const getEventStatusColor = (type: string) => {
 };
 
 export default function Events() {
-  const [searchTerm, setSearchTerm] = useState("");
+  const [level1SearchTerm, setLevel1SearchTerm] = useState("");
+  const [level2SearchTerm, setLevel2SearchTerm] = useState("");
+  const [level1Events, setLevel1Events] = useState<Event[]>([]);
+  const [level2Events, setLevel2Events] = useState<Event[]>([]);
+  const [loadingLevel1, setLoadingLevel1] = useState(false);
+  const [loadingLevel2, setLoadingLevel2] = useState(false);
+  const [loading, setLoading] = useState(false);
   const [showForm, setShowForm] = useState(false);
   const [editingEvent, setEditingEvent] = useState<Event | null>(null);
   const [deliveryMode, setDeliveryMode] = useState("offline");
@@ -88,10 +95,6 @@ export default function Events() {
   ]);
   const [benefits, setBenefits] = useState<string[]>([""]);
   const [thingsToBring, setThingsToBring] = useState<string[]>([""]);
-  const [events, setEvents] = useState<Event[]>([]);
-  const [meta, setMeta] = useState<PaginationMeta | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [currentPage, setCurrentPage] = useState(1);
   const navigate = useNavigate();
 
   const [pendingEventType, setPendingEventType] = useState<Record<number, string>>({});
@@ -107,8 +110,11 @@ export default function Events() {
         eventtype: newType,
       });
       if (response.data?.success || response.status === 200 || response.status === 201) {
-        setEvents(
-          events.map((ev) => (ev.id === id ? { ...ev, eventtype: newType } : ev))
+        setLevel1Events(
+          level1Events.map((ev) => (ev.id === id ? { ...ev, eventtype: newType } : ev))
+        );
+        setLevel2Events(
+          level2Events.map((ev) => (ev.id === id ? { ...ev, eventtype: newType } : ev))
         );
         setPendingEventType((prev) => {
           const next = { ...prev };
@@ -127,29 +133,46 @@ export default function Events() {
   };
 
   useEffect(() => {
-    fetchEvents(currentPage);
-  }, [currentPage]);
+    fetchLevel1Events();
+    fetchLevel2Events();
+  }, []);
 
-  const fetchEvents = async (page: number) => {
-    setLoading(true);
+  const fetchLevel1Events = async () => {
+    setLoadingLevel1(true);
     try {
-      const response = await api.post("/event/get", { page });
+      const response = await api.post("/event/get", { leveltype: "level1" });
       if (response.data?.success) {
-        setEvents(response.data.data.events);
-        setMeta(response.data.data.meta);
+        setLevel1Events(response.data.data.events.filter((e: Event) => e.leveltype !== "level2"));
       }
     } catch (error) {
-      console.error("Failed to fetch events:", error);
+      console.error("Failed to fetch level 1 events:", error);
     } finally {
-      setLoading(false);
+      setLoadingLevel1(false);
+    }
+  };
+
+  const fetchLevel2Events = async () => {
+    setLoadingLevel2(true);
+    try {
+      const response = await api.post("/event/get", { leveltype: "level2" });
+      if (response.data?.success) {
+        setLevel2Events(response.data.data.events.filter((e: Event) => e.leveltype === "level2"));
+      }
+    } catch (error) {
+      console.error("Failed to fetch level 2 events:", error);
+    } finally {
+      setLoadingLevel2(false);
     }
   };
 
   const toggleStatus = async (id: number, currentStatus: string) => {
     const newStatus = currentStatus === "active" ? "inactive" : "active";
     // Optimistic UI update
-    setEvents(
-      events.map((ev) => (ev.id === id ? { ...ev, status: newStatus } : ev)),
+    setLevel1Events(
+      level1Events.map((ev) => (ev.id === id ? { ...ev, status: newStatus } : ev)),
+    );
+    setLevel2Events(
+      level2Events.map((ev) => (ev.id === id ? { ...ev, status: newStatus } : ev)),
     );
     try {
       const response = await api.post("/event/update-status", {
@@ -158,15 +181,25 @@ export default function Events() {
       });
       if (!response.data?.success) {
         // Revert on failure
-        setEvents(
-          events.map((ev) =>
+        setLevel1Events(
+          level1Events.map((ev) =>
+            ev.id === id ? { ...ev, status: currentStatus } : ev,
+          ),
+        );
+        setLevel2Events(
+          level2Events.map((ev) =>
             ev.id === id ? { ...ev, status: currentStatus } : ev,
           ),
         );
       }
     } catch (err) {
-      setEvents(
-        events.map((ev) =>
+      setLevel1Events(
+        level1Events.map((ev) =>
+          ev.id === id ? { ...ev, status: currentStatus } : ev,
+        ),
+      );
+      setLevel2Events(
+        level2Events.map((ev) =>
           ev.id === id ? { ...ev, status: currentStatus } : ev,
         ),
       );
@@ -183,7 +216,8 @@ export default function Events() {
       try {
         const response = await api.post("/event/delete", { id });
         if (response.data?.success) {
-          fetchEvents(currentPage);
+          fetchLevel1Events();
+          fetchLevel2Events();
         } else {
           alert("Failed to delete event.");
         }
@@ -194,10 +228,16 @@ export default function Events() {
     }
   };
 
-  const filteredEvents = events.filter(
+  const filteredLevel1Events = level1Events.filter(
     (event) =>
-      event.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      event.city.toLowerCase().includes(searchTerm.toLowerCase()),
+      event.title.toLowerCase().includes(level1SearchTerm.toLowerCase()) ||
+      event.city.toLowerCase().includes(level1SearchTerm.toLowerCase()),
+  );
+
+  const filteredLevel2Events = level2Events.filter(
+    (event) =>
+      event.title.toLowerCase().includes(level2SearchTerm.toLowerCase()) ||
+      event.city.toLowerCase().includes(level2SearchTerm.toLowerCase()),
   );
 
   const handleCreateEvent = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -273,8 +313,8 @@ export default function Events() {
         setSchedules([{ starttime: "", endtime: "", title: "" }]);
         setBenefits([""]);
         setThingsToBring([""]);
-        setCurrentPage(1);
-        fetchEvents(1);
+        fetchLevel1Events();
+        fetchLevel2Events();
       }
     } catch (err) {
       console.error("Error creating event", err);
@@ -908,288 +948,570 @@ export default function Events() {
           </form>
         </motion.div>
       ) : (
-        <div className="bg-white rounded-2xl shadow-elegant border border-saffron-50/50 overflow-hidden">
-          {/* Table Toolbar */}
-          <div className="p-4 border-b border-gray-100 flex flex-col sm:flex-row justify-between items-center gap-4 bg-gray-50/50">
-            <div className="relative w-full sm:max-w-md">
-              <Search className="w-5 h-5 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-              <input
-                type="text"
-                placeholder="Search events by title or city..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-saffron-500/50 focus:border-saffron-500 transition-all text-sm"
-              />
-            </div>
-          </div>
-
-          {/* Table */}
-          <div className="overflow-x-auto relative min-h-[300px]">
-            {loading && (
-              <div className="absolute inset-0 bg-white/60 backdrop-blur-sm z-10 flex items-center justify-center">
-                <div className="w-8 h-8 border-4 border-saffron-500 border-t-transparent rounded-full animate-spin"></div>
+        <>
+          <div className="bg-white rounded-2xl shadow-elegant border border-saffron-50/50 overflow-hidden">
+            {/* Table Toolbar */}
+            <div className="p-4 border-b border-gray-100 flex flex-col sm:flex-row justify-between items-center gap-4 bg-gray-50/50">
+              <div className="relative w-full sm:max-w-md">
+                <Search className="w-5 h-5 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                <input
+                  type="text"
+                  placeholder="Search Level 1 events by title or city..."
+                  value={level1SearchTerm}
+                  onChange={(e) => setLevel1SearchTerm(e.target.value)}
+                  className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-saffron-500/50 focus:border-saffron-500 transition-all text-sm"
+                />
               </div>
-            )}
-            <table className="w-full text-left border-collapse min-w-[800px]">
-              <thead>
-                <tr className="bg-gray-50/50 border-b border-gray-100 text-gray-500 text-sm">
-                  <th className="px-6 py-4 font-medium">S.No</th>
-                  <th className="px-6 py-4 font-medium">Actions</th>
-                  <th className="px-6 py-4 font-medium min-w-[300px]">
-                    Event Details
-                  </th>
-                  <th className="px-6 py-4 font-medium">Level Type</th>
-                  <th className="px-6 py-4 font-medium">Date & Location</th>
-                  <th className="px-6 py-4 font-medium">Registration Fee</th>
-                  <th className="px-6 py-4 font-medium">Attendees</th>
-                  <th className="px-6 py-4 font-medium">Event Type</th>
-                  <th className="px-6 py-4 font-medium text-center">Status</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-100">
-                {filteredEvents.length === 0 && !loading ? (
-                  <tr>
-                    <td
-                      colSpan={9}
-                      className="px-6 py-8 text-center text-gray-500"
-                    >
-                      No events found.
-                    </td>
+            </div>
+
+            {/* Table */}
+            <div className="overflow-x-auto relative min-h-[300px]">
+              {loadingLevel1 && (
+                <div className="absolute inset-0 bg-white/60 backdrop-blur-sm z-10 flex items-center justify-center">
+                  <div className="w-8 h-8 border-4 border-saffron-500 border-t-transparent rounded-full animate-spin"></div>
+                </div>
+              )}
+              <h2 className="px-6 py-4 text-xl font-bold text-gray-800">Level 1 Events</h2>
+              <table className="w-full text-left border-collapse min-w-[800px]">
+                <thead>
+                  <tr className="bg-gray-50/50 border-b border-gray-100 text-gray-500 text-sm">
+                    <th className="px-6 py-4 font-medium">S.No</th>
+                    <th className="px-6 py-4 font-medium">Actions</th>
+                    <th className="px-6 py-4 font-medium min-w-[300px]">
+                      Event Details
+                    </th>
+                    <th className="px-6 py-4 font-medium">Level Type</th>
+                    <th className="px-6 py-4 font-medium">Date & Location</th>
+                    <th className="px-6 py-4 font-medium">Registration Fee</th>
+                    <th className="px-6 py-4 font-medium">Attendees</th>
+                    <th className="px-6 py-4 font-medium">Event Type</th>
+                    <th className="px-6 py-4 font-medium text-center">Status</th>
                   </tr>
-                ) : (
-                  filteredEvents.map((event, index) => (
-                    <tr
-                      key={event.id}
-                      className="hover:bg-saffron-50/30 transition-colors group"
-                    >
-                      <td className="px-6 py-4">
-                        <h1 className="flex h-9 w-9 items-center justify-center rounded-full bg-orange-100 text-sm font-bold text-orange-600  ring-orange-200">
-                          {index + 1}
-                        </h1>
-                      </td>
-                      <td className="px-6 py-4">
-                        <div className="flex items-center gap-0 transition-opacity">
-                          <button
-                            onClick={() => navigate(`/events/${event.id}`)}
-                            className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors cursor-pointer"
-                            title="View Details"
-                          >
-                            <Eye className="w-4 h-4" />
-                          </button>
-                          <button
-                            onClick={() => {
-                              setEditingEvent(event);
-                              setDeliveryMode(event.deliverymode || "offline");
-                              setLevelType(event.leveltype || "level1");
-                              setShowForm(true);
-                              setSchedules(
-                                event.agenda?.length
-                                  ? event.agenda
-                                  : [{ starttime: "", endtime: "", title: "" }],
-                              );
-                              setBenefits(
-                                event.benefits?.length ? event.benefits : [""],
-                              );
-                              setThingsToBring(
-                                event.thingstobring?.length
-                                  ? event.thingstobring
-                                  : [""],
-                              );
-                            }}
-                            className="p-2 text-gray-400 hover:text-saffron-600 hover:bg-saffron-50 rounded-lg transition-colors cursor-pointer"
-                            title="Edit"
-                          >
-                            <Edit2 className="w-4 h-4" />
-                          </button>
-                          <button
-                            onClick={() => deleteEvent(event.id)}
-                            className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors cursor-pointer"
-                            title="Delete"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4">
-                        <div className="flex items-center gap-4">
-                          <img
-                            src={
-                              event.image
-                                ? event.image.startsWith("http")
-                                  ? event.image
-                                  : `http://localhost:3003${event.image}`
-                                : "https://images.unsplash.com/photo-1582979512210-99b6a53386f9?auto=format&fit=crop&q=80&w=200&h=200"
-                            }
-                            alt={event.title}
-                            className="w-12 h-12 rounded-lg object-cover shadow-sm bg-gray-100"
-                          />
-                          <div>
-                            <p
-                              className="font-semibold text-gray-800 line-clamp-1"
-                              title={event.title}
-                            >
-                              {event.title}
-                            </p>
-                            <div className="text-xs text-gray-500 mt-1 flex flex-col gap-0.5">
-                              {event.deliverymode && (
-                                <p>
-                                  Delivery:{" "}
-                                  <span className={`font-bold ${event.deliverymode === "online" ? "text-pink-600" : "text-emerald-600"}`}>
-                                    {event.deliverymode}
-                                  </span>
-                                </p>
-                              )}
-                              <p>
-                                Type:{" "}
-                                <span className={`capitalize font-medium ${getEventStatusColor(event.eventtype)}`}>
-                                  {event.eventtype}
-                                </span>
-                                {" | "}ID: {event.id}
-                              </p>
-                            </div>
-                          </div>
-                        </div>
-                      </td>
-
-                      <td className="px-6 py-4">
-                        <span
-                          className={`inline-block px-2 py-1 rounded-md text-[10px] font-bold uppercase tracking-wider ${event.leveltype === "level2"
-                              ? "bg-purple-100 text-purple-700 border border-purple-200"
-                              : "bg-blue-100 text-blue-700 border border-blue-200"
-                            }`}
-                        >
-                          {event.leveltype || "Level 1"}
-                        </span>
-                      </td>
-
-                      <td className="px-6 py-4">
-                        <div className="space-y-1">
-                          <div className="flex items-center gap-2 text-sm text-gray-600">
-                            <CalendarIcon className="w-4 h-4 text-saffron-500 shrink-0" />
-                            <span className="whitespace-nowrap">
-                              {event.eventdate
-                                ? new Date(event.eventdate).toLocaleDateString(
-                                  "en-US",
-                                  {
-                                    month: "short",
-                                    day: "numeric",
-                                    year: "numeric",
-                                  },
-                                )
-                                : "TBA"}
-
-                              {event.eventtodate && " - "}
-
-                              {event.eventtodate &&
-                                new Date(event.eventtodate).toLocaleDateString(
-                                  "en-US",
-                                  {
-                                    month: "short",
-                                    day: "numeric",
-                                    year: "numeric",
-                                  },
-                                )}
-                            </span>
-                          </div>
-                          {event.deliverymode !== "online" ? (
-                            <div
-                              className="flex items-center gap-2 text-xs text-gray-500 line-clamp-1"
-                              title={`${event.address || ""}, ${event.city || ""}`}
-                            >
-                              <MapPin className="w-3.5 h-3.5 shrink-0" />
-                              {event.city || "TBA"}, {event.state || "TBA"}
-                            </div>
-                          ) : (
-                            <div className="flex items-center gap-2 text-xs text-gray-500 line-clamp-1">
-                              <MapPin className="w-3.5 h-3.5 shrink-0" />
-                              Online
-                            </div>
-                          )}
-                        </div>
-                      </td>
-
-                      <td className="px-6 py-4">
-                        <div className="flex items-center gap-1">
-                          <IndianRupee className="h-4 w-4 text-black " />
-                          <p className="font-bold text-black">
-                            {event.registrationfee}
-                          </p>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4">
-                        <div className="flex items-center gap-2 text-sm text-gray-600">
-                          <Users className="w-4 h-4 text-gray-400" />
-                          {event.participants || 1}
-                        </div>
-                      </td>
-                      <td className="px-6 py-4">
-                        {event.deliverymode === "online" ? (
-                          <span className="text-gray-400 text-xs">Only for Offline Events</span>
-                        ) : (
-                          <div className="flex flex-col gap-2">
-                            <select
-                              className={`text-xs border border-gray-200 rounded-lg px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-saffron-500 capitalize ${getEventStatusColor(pendingEventType[event.id] || event.eventtype)} bg-white min-w-[100px] cursor-pointer`}
-                              value={pendingEventType[event.id] || event.eventtype}
-                              onChange={(e) =>
-                                setPendingEventType({
-                                  ...pendingEventType,
-                                  [event.id]: e.target.value,
-                                })
-                              }
-                            >
-                              <option value="upcoming" className="text-orange-500">Upcoming</option>
-                              <option value="ongoing" className="text-blue-600">Ongoing</option>
-                              <option value="completed" className="text-green-600">Completed</option>
-                              <option value="cancelled" className="text-red-600">Cancelled</option>
-                            </select>
-                            {pendingEventType[event.id] &&
-                              pendingEventType[event.id] !== event.eventtype && (
-                                <button
-                                  onClick={() => handleUpdateEventType(event.id)}
-                                  disabled={updatingEventTypeId === event.id}
-                                  className="text-[10px] uppercase font-bold tracking-wider bg-saffron-500 text-white px-2 py-1 rounded-md hover:bg-saffron-600 transition-colors shadow-sm w-full cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-1"
-                                >
-                                  {updatingEventTypeId === event.id ? (
-                                    <>
-                                      <span className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
-                                      Wait
-                                    </>
-                                  ) : (
-                                    "Confirm"
-                                  )}
-                                </button>
-                              )}
-                          </div>
-                        )}
-                      </td>
-                      <td className="px-6 py-4 text-center">
-                        <div
-                          className="flex items-center justify-center cursor-pointer"
-                          onClick={() => toggleStatus(event.id, event.status)}
-                        >
-                          <div
-                            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${event.status === "active" ? "bg-saffron-500" : "bg-gray-300"}`}
-                          >
-                            <span
-                              className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${event.status === "active" ? "translate-x-6" : "translate-x-1"}`}
-                            />
-                          </div>
-                          <span
-                            className={`ml-2 text-xs font-semibold capitalize ${event.status === "active" ? "text-saffron-600" : "text-gray-500"}`}
-                          >
-                            {event.status}
-                          </span>
-                        </div>
+                </thead>
+                <tbody className="divide-y divide-gray-100">
+                  {filteredLevel1Events.length === 0 && !loadingLevel1 ? (
+                    <tr>
+                      <td
+                        colSpan={9}
+                        className="px-6 py-8 text-center text-gray-500"
+                      >
+                        No events found.
                       </td>
                     </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
+                  ) : (
+                    filteredLevel1Events.map((event, index) => (
+                      <tr
+                        key={event.id}
+                        className="hover:bg-saffron-50/30 transition-colors group"
+                      >
+                        <td className="px-6 py-4">
+                          <h1 className="flex h-9 w-9 items-center justify-center rounded-full bg-orange-100 text-sm font-bold text-orange-600  ring-orange-200">
+                            {index + 1}
+                          </h1>
+                        </td>
+                        <td className="px-6 py-4">
+                          <div className="flex items-center gap-0 transition-opacity">
+                            <button
+                              onClick={() => navigate(`/events/${event.id}`)}
+                              className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors cursor-pointer"
+                              title="View Details"
+                            >
+                              <Eye className="w-4 h-4" />
+                            </button>
+                            <button
+                              onClick={() => {
+                                setEditingEvent(event);
+                                setDeliveryMode(event.deliverymode || "offline");
+                                setLevelType(event.leveltype || "level1");
+                                setShowForm(true);
+                                setSchedules(
+                                  event.agenda?.length
+                                    ? event.agenda
+                                    : [{ starttime: "", endtime: "", title: "" }],
+                                );
+                                setBenefits(
+                                  event.benefits?.length ? event.benefits : [""],
+                                );
+                                setThingsToBring(
+                                  event.thingstobring?.length
+                                    ? event.thingstobring
+                                    : [""],
+                                );
+                              }}
+                              className="p-2 text-gray-400 hover:text-saffron-600 hover:bg-saffron-50 rounded-lg transition-colors cursor-pointer"
+                              title="Edit"
+                            >
+                              <Edit2 className="w-4 h-4" />
+                            </button>
+                            <button
+                              onClick={() => deleteEvent(event.id)}
+                              className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors cursor-pointer"
+                              title="Delete"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </div>
+                        </td>
+                        <td className="px-6 py-4">
+                          <div className="flex items-center gap-4">
+                            <img
+                              src={
+                                event.image
+                                  ? event.image.startsWith("http")
+                                    ? event.image
+                                    : `${IMAGEBASEURL}${event.image}`
+                                  : "https://images.unsplash.com/photo-1582979512210-99b6a53386f9?auto=format&fit=crop&q=80&w=200&h=200"
+                              }
+                              alt={event.title}
+                              className="w-12 h-12 rounded-lg object-cover shadow-sm bg-gray-100"
+                            />
+                            <div>
+                              <p
+                                className="font-semibold text-gray-800 line-clamp-1"
+                                title={event.title}
+                              >
+                                {event.title}
+                              </p>
+                              <div className="text-xs text-gray-500 mt-1 flex flex-col gap-0.5">
+                                {event.deliverymode && (
+                                  <p>
+                                    Delivery:{" "}
+                                    <span className={`font-bold ${event.deliverymode === "online" ? "text-pink-600" : "text-emerald-600"}`}>
+                                      {event.deliverymode}
+                                    </span>
+                                  </p>
+                                )}
+                                <p>
+                                  Type:{" "}
+                                  <span className={`capitalize font-medium ${getEventStatusColor(event.eventtype)}`}>
+                                    {event.eventtype}
+                                  </span>
+                                  {" | "}ID: {event.id}
+                                </p>
+                              </div>
+                            </div>
+                          </div>
+                        </td>
 
-          {/* Pagination Removed */}
-        </div>
+                        <td className="px-6 py-4">
+                          <span
+                            className={`inline-block px-2 py-1 rounded-md text-[10px] font-bold uppercase tracking-wider ${event.leveltype === "level2"
+                                ? "bg-purple-100 text-purple-700 border border-purple-200"
+                                : "bg-blue-100 text-blue-700 border border-blue-200"
+                              }`}
+                          >
+                            {event.leveltype || "Level 1"}
+                          </span>
+                        </td>
+
+                        <td className="px-6 py-4">
+                          <div className="space-y-1">
+                            <div className="flex items-center gap-2 text-sm text-gray-600">
+                              <CalendarIcon className="w-4 h-4 text-saffron-500 shrink-0" />
+                              <span className="whitespace-nowrap">
+                                {event.eventdate
+                                  ? new Date(event.eventdate).toLocaleDateString(
+                                    "en-US",
+                                    {
+                                      month: "short",
+                                      day: "numeric",
+                                      year: "numeric",
+                                    },
+                                  )
+                                  : "TBA"}
+
+                                {event.eventtodate && " - "}
+
+                                {event.eventtodate &&
+                                  new Date(event.eventtodate).toLocaleDateString(
+                                    "en-US",
+                                    {
+                                      month: "short",
+                                      day: "numeric",
+                                      year: "numeric",
+                                    },
+                                  )}
+                              </span>
+                            </div>
+                            {event.deliverymode !== "online" ? (
+                              <div
+                                className="flex items-center gap-2 text-xs text-gray-500 line-clamp-1"
+                                title={`${event.address || ""}, ${event.city || ""}`}
+                              >
+                                <MapPin className="w-3.5 h-3.5 shrink-0" />
+                                {event.city || "TBA"}, {event.state || "TBA"}
+                              </div>
+                            ) : (
+                              <div className="flex items-center gap-2 text-xs text-gray-500 line-clamp-1">
+                                <MapPin className="w-3.5 h-3.5 shrink-0" />
+                                Online
+                              </div>
+                            )}
+                          </div>
+                        </td>
+
+                        <td className="px-6 py-4">
+                          <div className="flex items-center gap-1">
+                            <IndianRupee className="h-4 w-4 text-black " />
+                            <p className="font-bold text-black">
+                              {event.registrationfee}
+                            </p>
+                          </div>
+                        </td>
+                        <td className="px-6 py-4">
+                          <div className="flex items-center gap-2 text-sm text-gray-600">
+                            <Users className="w-4 h-4 text-gray-400" />
+                            {event.participants || 1}
+                          </div>
+                        </td>
+                        <td className="px-6 py-4">
+                          {event.deliverymode === "online" ? (
+                            <span className="text-gray-400 text-xs">Only for Offline Events</span>
+                          ) : (
+                            <div className="flex flex-col gap-2">
+                              <select
+                                className={`text-xs border border-gray-200 rounded-lg px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-saffron-500 capitalize ${getEventStatusColor(pendingEventType[event.id] || event.eventtype)} bg-white min-w-[100px] cursor-pointer`}
+                                value={pendingEventType[event.id] || event.eventtype}
+                                onChange={(e) =>
+                                  setPendingEventType({
+                                    ...pendingEventType,
+                                    [event.id]: e.target.value,
+                                  })
+                                }
+                              >
+                                <option value="upcoming" className="text-orange-500">Upcoming</option>
+                                <option value="ongoing" className="text-blue-600">Ongoing</option>
+                                <option value="completed" className="text-green-600">Completed</option>
+                                <option value="cancelled" className="text-red-600">Cancelled</option>
+                              </select>
+                              {pendingEventType[event.id] &&
+                                pendingEventType[event.id] !== event.eventtype && (
+                                  <button
+                                    onClick={() => handleUpdateEventType(event.id)}
+                                    disabled={updatingEventTypeId === event.id}
+                                    className="text-[10px] uppercase font-bold tracking-wider bg-saffron-500 text-white px-2 py-1 rounded-md hover:bg-saffron-600 transition-colors shadow-sm w-full cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-1"
+                                  >
+                                    {updatingEventTypeId === event.id ? (
+                                      <>
+                                        <span className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
+                                        Wait
+                                      </>
+                                    ) : (
+                                      "Confirm"
+                                    )}
+                                  </button>
+                                )}
+                            </div>
+                          )}
+                        </td>
+                        <td className="px-6 py-4 text-center">
+                          <div
+                            className="flex items-center justify-center cursor-pointer"
+                            onClick={() => toggleStatus(event.id, event.status)}
+                          >
+                            <div
+                              className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${event.status === "active" ? "bg-saffron-500" : "bg-gray-300"}`}
+                            >
+                              <span
+                                className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${event.status === "active" ? "translate-x-6" : "translate-x-1"}`}
+                              />
+                            </div>
+                            <span
+                              className={`ml-2 text-xs font-semibold capitalize ${event.status === "active" ? "text-saffron-600" : "text-gray-500"}`}
+                            >
+                              {event.status}
+                            </span>
+                          </div>
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+          <div className="bg-white rounded-2xl shadow-elegant border border-saffron-50/50 overflow-hidden mt-8">
+            {/* Table Toolbar */}
+            <div className="p-4 border-b border-gray-100 flex flex-col sm:flex-row justify-between items-center gap-4 bg-gray-50/50">
+              <div className="relative w-full sm:max-w-md">
+                <Search className="w-5 h-5 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                <input
+                  type="text"
+                  placeholder="Search Level 2 events by title or city..."
+                  value={level2SearchTerm}
+                  onChange={(e) => setLevel2SearchTerm(e.target.value)}
+                  className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-saffron-500/50 focus:border-saffron-500 transition-all text-sm"
+                />
+              </div>
+            </div>
+
+            {/* Table */}
+            <div className="overflow-x-auto relative min-h-[300px]">
+              {loadingLevel2 && (
+                <div className="absolute inset-0 bg-white/60 backdrop-blur-sm z-10 flex items-center justify-center">
+                  <div className="w-8 h-8 border-4 border-saffron-500 border-t-transparent rounded-full animate-spin"></div>
+                </div>
+              )}
+              <h2 className="px-6 py-4 text-xl font-bold text-gray-800">Level 2 Events</h2>
+              <table className="w-full text-left border-collapse min-w-[800px]">
+                <thead>
+                  <tr className="bg-gray-50/50 border-b border-gray-100 text-gray-500 text-sm">
+                    <th className="px-6 py-4 font-medium">S.No</th>
+                    <th className="px-6 py-4 font-medium">Actions</th>
+                    <th className="px-6 py-4 font-medium min-w-[300px]">
+                      Event Details
+                    </th>
+                    <th className="px-6 py-4 font-medium">Level Type</th>
+                    <th className="px-6 py-4 font-medium">Date & Location</th>
+                    <th className="px-6 py-4 font-medium">Registration Fee</th>
+                    <th className="px-6 py-4 font-medium">Attendees</th>
+                    <th className="px-6 py-4 font-medium">Event Type</th>
+                    <th className="px-6 py-4 font-medium text-center">Status</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100">
+                  {filteredLevel2Events.length === 0 && !loadingLevel2 ? (
+                    <tr>
+                      <td
+                        colSpan={9}
+                        className="px-6 py-8 text-center text-gray-500"
+                      >
+                        No events found.
+                      </td>
+                    </tr>
+                  ) : (
+                    filteredLevel2Events.map((event, index) => (
+                      <tr
+                        key={event.id}
+                        className="hover:bg-saffron-50/30 transition-colors group"
+                      >
+                        <td className="px-6 py-4">
+                          <h1 className="flex h-9 w-9 items-center justify-center rounded-full bg-orange-100 text-sm font-bold text-orange-600  ring-orange-200">
+                            {index + 1}
+                          </h1>
+                        </td>
+                        <td className="px-6 py-4">
+                          <div className="flex items-center gap-0 transition-opacity">
+                            <button
+                              onClick={() => navigate(`/events/${event.id}`)}
+                              className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors cursor-pointer"
+                              title="View Details"
+                            >
+                              <Eye className="w-4 h-4" />
+                            </button>
+                            <button
+                              onClick={() => {
+                                setEditingEvent(event);
+                                setDeliveryMode(event.deliverymode || "offline");
+                                setLevelType(event.leveltype || "level1");
+                                setShowForm(true);
+                                setSchedules(
+                                  event.agenda?.length
+                                    ? event.agenda
+                                    : [{ starttime: "", endtime: "", title: "" }],
+                                );
+                                setBenefits(
+                                  event.benefits?.length ? event.benefits : [""],
+                                );
+                                setThingsToBring(
+                                  event.thingstobring?.length
+                                    ? event.thingstobring
+                                    : [""],
+                                );
+                              }}
+                              className="p-2 text-gray-400 hover:text-saffron-600 hover:bg-saffron-50 rounded-lg transition-colors cursor-pointer"
+                              title="Edit"
+                            >
+                              <Edit2 className="w-4 h-4" />
+                            </button>
+                            <button
+                              onClick={() => deleteEvent(event.id)}
+                              className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors cursor-pointer"
+                              title="Delete"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </div>
+                        </td>
+                        <td className="px-6 py-4">
+                          <div className="flex items-center gap-4">
+                            <img
+                              src={
+                                event.image
+                                  ? event.image.startsWith("http")
+                                    ? event.image
+                                    : `${IMAGEBASEURL}${event.image}`
+                                  : "https://images.unsplash.com/photo-1582979512210-99b6a53386f9?auto=format&fit=crop&q=80&w=200&h=200"
+                              }
+                              alt={event.title}
+                              className="w-12 h-12 rounded-lg object-cover shadow-sm bg-gray-100"
+                            />
+                            <div>
+                              <p
+                                className="font-semibold text-gray-800 line-clamp-1"
+                                title={event.title}
+                              >
+                                {event.title}
+                              </p>
+                              <div className="text-xs text-gray-500 mt-1 flex flex-col gap-0.5">
+                                {event.deliverymode && (
+                                  <p>
+                                    Delivery:{" "}
+                                    <span className={`font-bold ${event.deliverymode === "online" ? "text-pink-600" : "text-emerald-600"}`}>
+                                      {event.deliverymode}
+                                    </span>
+                                  </p>
+                                )}
+                                <p>
+                                  Type:{" "}
+                                  <span className={`capitalize font-medium ${getEventStatusColor(event.eventtype)}`}>
+                                    {event.eventtype}
+                                  </span>
+                                  {" | "}ID: {event.id}
+                                </p>
+                              </div>
+                            </div>
+                          </div>
+                        </td>
+
+                        <td className="px-6 py-4">
+                          <span
+                            className={`inline-block px-2 py-1 rounded-md text-[10px] font-bold uppercase tracking-wider ${event.leveltype === "level2"
+                                ? "bg-purple-100 text-purple-700 border border-purple-200"
+                                : "bg-blue-100 text-blue-700 border border-blue-200"
+                              }`}
+                          >
+                            {event.leveltype || "Level 1"}
+                          </span>
+                        </td>
+
+                        <td className="px-6 py-4">
+                          <div className="space-y-1">
+                            <div className="flex items-center gap-2 text-sm text-gray-600">
+                              <CalendarIcon className="w-4 h-4 text-saffron-500 shrink-0" />
+                              <span className="whitespace-nowrap">
+                                {event.eventdate
+                                  ? new Date(event.eventdate).toLocaleDateString(
+                                    "en-US",
+                                    {
+                                      month: "short",
+                                      day: "numeric",
+                                      year: "numeric",
+                                    },
+                                  )
+                                  : "TBA"}
+
+                                {event.eventtodate && " - "}
+
+                                {event.eventtodate &&
+                                  new Date(event.eventtodate).toLocaleDateString(
+                                    "en-US",
+                                    {
+                                      month: "short",
+                                      day: "numeric",
+                                      year: "numeric",
+                                    },
+                                  )}
+                              </span>
+                            </div>
+                            {event.deliverymode !== "online" ? (
+                              <div
+                                className="flex items-center gap-2 text-xs text-gray-500 line-clamp-1"
+                                title={`${event.address || ""}, ${event.city || ""}`}
+                              >
+                                <MapPin className="w-3.5 h-3.5 shrink-0" />
+                                {event.city || "TBA"}, {event.state || "TBA"}
+                              </div>
+                            ) : (
+                              <div className="flex items-center gap-2 text-xs text-gray-500 line-clamp-1">
+                                <MapPin className="w-3.5 h-3.5 shrink-0" />
+                                Online
+                              </div>
+                            )}
+                          </div>
+                        </td>
+
+                        <td className="px-6 py-4">
+                          <div className="flex items-center gap-1">
+                            <IndianRupee className="h-4 w-4 text-black " />
+                            <p className="font-bold text-black">
+                              {event.registrationfee}
+                            </p>
+                          </div>
+                        </td>
+                        <td className="px-6 py-4">
+                          <div className="flex items-center gap-2 text-sm text-gray-600">
+                            <Users className="w-4 h-4 text-gray-400" />
+                            {event.participants || 1}
+                          </div>
+                        </td>
+                        <td className="px-6 py-4">
+                          {event.deliverymode === "online" ? (
+                            <span className="text-gray-400 text-xs">Only for Offline Events</span>
+                          ) : (
+                            <div className="flex flex-col gap-2">
+                              <select
+                                className={`text-xs border border-gray-200 rounded-lg px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-saffron-500 capitalize ${getEventStatusColor(pendingEventType[event.id] || event.eventtype)} bg-white min-w-[100px] cursor-pointer`}
+                                value={pendingEventType[event.id] || event.eventtype}
+                                onChange={(e) =>
+                                  setPendingEventType({
+                                    ...pendingEventType,
+                                    [event.id]: e.target.value,
+                                  })
+                                }
+                              >
+                                <option value="upcoming" className="text-orange-500">Upcoming</option>
+                                <option value="ongoing" className="text-blue-600">Ongoing</option>
+                                <option value="completed" className="text-green-600">Completed</option>
+                                <option value="cancelled" className="text-red-600">Cancelled</option>
+                              </select>
+                              {pendingEventType[event.id] &&
+                                pendingEventType[event.id] !== event.eventtype && (
+                                  <button
+                                    onClick={() => handleUpdateEventType(event.id)}
+                                    disabled={updatingEventTypeId === event.id}
+                                    className="text-[10px] uppercase font-bold tracking-wider bg-saffron-500 text-white px-2 py-1 rounded-md hover:bg-saffron-600 transition-colors shadow-sm w-full cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-1"
+                                  >
+                                    {updatingEventTypeId === event.id ? (
+                                      <>
+                                        <span className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
+                                        Wait
+                                      </>
+                                    ) : (
+                                      "Confirm"
+                                    )}
+                                  </button>
+                                )}
+                            </div>
+                          )}
+                        </td>
+                        <td className="px-6 py-4 text-center">
+                          <div
+                            className="flex items-center justify-center cursor-pointer"
+                            onClick={() => toggleStatus(event.id, event.status)}
+                          >
+                            <div
+                              className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${event.status === "active" ? "bg-saffron-500" : "bg-gray-300"}`}
+                            >
+                              <span
+                                className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${event.status === "active" ? "translate-x-6" : "translate-x-1"}`}
+                              />
+                            </div>
+                            <span
+                              className={`ml-2 text-xs font-semibold capitalize ${event.status === "active" ? "text-saffron-600" : "text-gray-500"}`}
+                            >
+                              {event.status}
+                            </span>
+                          </div>
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </>
       )}
     </div>
   );

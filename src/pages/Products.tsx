@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { IMAGEBASEURL } from "../services/api";
 import { Plus, Search, Edit2, Trash2, X, ShoppingBag } from "lucide-react";
 import { motion } from "framer-motion";
 import api from "../services/api";
@@ -452,7 +453,7 @@ export default function Products() {
                               product.image
                                 ? product.image.startsWith("http")
                                   ? product.image
-                                  : `http://localhost:3003${product.image}`
+                                  : `${IMAGEBASEURL}${product.image}`
                                 : "https://images.unsplash.com/photo-1582979512210-99b6a53386f9?auto=format&fit=crop&q=80&w=200&h=200"
                             }
                             alt={product.productname}

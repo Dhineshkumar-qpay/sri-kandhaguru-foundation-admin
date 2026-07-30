@@ -1,7 +1,9 @@
 import axios from "axios";
 
+export const IMAGEBASEURL = "http://localhost:3003";
+
 const api = axios.create({
-  baseURL: "http://localhost:3003/api",
+  baseURL: "https://rpg.791.mytemp.website/api",
   headers: {
     "Content-Type": "application/json",
   },

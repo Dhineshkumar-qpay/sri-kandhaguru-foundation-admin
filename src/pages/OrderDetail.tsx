@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { IMAGEBASEURL } from "../services/api";
 import { useParams, useNavigate } from "react-router-dom";
 import {
   MapPin,
@@ -328,7 +329,7 @@ export default function OrderDetail() {
                     href={
                       selectedOrder.order.screenshot.startsWith("http")
                         ? selectedOrder.order.screenshot
-                        : `http://localhost:3003${selectedOrder.order.screenshot}`
+                        : `${IMAGEBASEURL}${selectedOrder.order.screenshot}`
                     }
                     target="_blank"
                     rel="noopener noreferrer"
@@ -338,7 +339,7 @@ export default function OrderDetail() {
                       src={
                         selectedOrder.order.screenshot.startsWith("http")
                           ? selectedOrder.order.screenshot
-                          : `http://localhost:3003${selectedOrder.order.screenshot}`
+                          : `${IMAGEBASEURL}${selectedOrder.order.screenshot}`
                       }
                       alt="Payment Screenshot"
                       className="w-full h-auto max-h-48 object-cover hover:scale-105 transition-transform duration-300"
@@ -369,7 +370,7 @@ export default function OrderDetail() {
                       item.productimage
                         ? item.productimage.startsWith("http")
                           ? item.productimage
-                          : `http://localhost:3003${item.productimage}`
+                          : `${IMAGEBASEURL}${item.productimage}`
                         : "https://via.placeholder.com/80"
                     }
                     alt={item.productname}

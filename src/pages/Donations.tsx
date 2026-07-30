@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { IMAGEBASEURL } from "../services/api";
 import {
   Search,
   Heart,
@@ -258,7 +259,7 @@ export default function Donations() {
                             href={
                               item.screenshot.startsWith("http")
                                 ? item.screenshot
-                                : `http://localhost:3003${item.screenshot}`
+                                : `${IMAGEBASEURL}${item.screenshot}`
                             }
                             target="_blank"
                             rel="noreferrer"
@@ -480,7 +481,7 @@ export default function Donations() {
                         src={
                           selectedDonation.screenshot.startsWith("http")
                             ? selectedDonation.screenshot
-                            : `http://localhost:3003${selectedDonation.screenshot}`
+                            : `${IMAGEBASEURL}${selectedDonation.screenshot}`
                         }
                         alt="Receipt" 
                         className="w-full rounded-lg border border-gray-200 object-contain"
