@@ -261,11 +261,10 @@ export default function Reviews() {
                   <button
                     key={pageNum}
                     onClick={() => setCurrentPage(pageNum)}
-                    className={`px-3 py-1 rounded-md transition-colors cursor-pointer ${
-                      pageNum === currentPage
-                        ? "bg-saffron-500 text-white shadow-sm"
-                        : "border border-gray-200 hover:bg-gray-100"
-                    }`}
+                    className={`px-3 py-1 rounded-md transition-colors cursor-pointer ${pageNum === currentPage
+                      ? "bg-saffron-500 text-white shadow-sm"
+                      : "border border-gray-200 hover:bg-gray-100"
+                      }`}
                   >
                     {pageNum}
                   </button>

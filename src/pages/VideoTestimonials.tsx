@@ -1,12 +1,5 @@
 import React, { useState, useEffect } from "react";
-import {
-  Plus,
-  Search,
-  Eye,
-  Trash2,
-  X,
-  Video as VideoIcon,
-} from "lucide-react";
+import { Plus, Search, Eye, Trash2, X, Video as VideoIcon } from "lucide-react";
 import { motion } from "framer-motion";
 import api from "../services/api";
 
@@ -43,7 +36,9 @@ export default function VideoTestimonials() {
     }
   };
 
-  const handleCreateTestimonial = async (e: React.FormEvent<HTMLFormElement>) => {
+  const handleCreateTestimonial = async (
+    e: React.FormEvent<HTMLFormElement>,
+  ) => {
     e.preventDefault();
     const formData = new FormData(e.currentTarget);
     const title = formData.get("title") as string;
@@ -63,7 +58,11 @@ export default function VideoTestimonials() {
         videourl,
         videoUrl: videourl, // Send both cases just to be safe
       });
-      if (response.data?.success || response.status === 200 || response.status === 201) {
+      if (
+        response.data?.success ||
+        response.status === 200 ||
+        response.status === 201
+      ) {
         setShowForm(false);
         fetchTestimonials();
       } else {
@@ -82,7 +81,7 @@ export default function VideoTestimonials() {
       setLoading(true);
       try {
         const response = await api.post("/video-testimonial/delete", { id });
-        if (response.data?.success || response.status === 200 || response.status === 201) {
+        if (response.data?.success || response.status === 200) {
           fetchTestimonials();
         } else {
           alert("Failed to delete testimonial.");
@@ -90,7 +89,7 @@ export default function VideoTestimonials() {
         }
       } catch (error) {
         console.error("Error deleting testimonial:", error);
-        alert("An error occurred while deleting.");
+        alert(error);
         setLoading(false);
       }
     }
@@ -120,7 +119,9 @@ export default function VideoTestimonials() {
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-gray-800">Video Testimonials</h1>
+          <h1 className="text-3xl font-bold text-gray-800">
+            Video Testimonials
+          </h1>
           <p className="text-gray-500 mt-1">
             Manage user video testimonials and reviews.
           </p>
@@ -234,7 +235,9 @@ export default function VideoTestimonials() {
               <thead>
                 <tr className="bg-gray-50/50 border-b border-gray-100 text-gray-500 text-sm">
                   <th className="px-6 py-4 font-medium w-16">S.No</th>
-                  <th className="px-6 py-4 font-medium text-right w-24">Actions</th>
+                  <th className="px-6 py-4 font-medium text-right w-24">
+                    Actions
+                  </th>
                   <th className="px-6 py-4 font-medium">Title</th>
                   <th className="px-6 py-4 font-medium">Description</th>
                 </tr>
@@ -242,13 +245,19 @@ export default function VideoTestimonials() {
               <tbody className="divide-y divide-gray-100">
                 {paginatedTestimonials.length === 0 && !loading ? (
                   <tr>
-                    <td colSpan={4} className="px-6 py-8 text-center text-gray-500">
+                    <td
+                      colSpan={4}
+                      className="px-6 py-8 text-center text-gray-500"
+                    >
                       No testimonials found.
                     </td>
                   </tr>
                 ) : (
                   paginatedTestimonials.map((item, index) => (
-                    <tr key={item.id} className="hover:bg-saffron-50/30 transition-colors group">
+                    <tr
+                      key={item.id}
+                      className="hover:bg-saffron-50/30 transition-colors group"
+                    >
                       <td className="px-6 py-4">
                         <span className="flex h-9 w-9 items-center justify-center rounded-full bg-orange-100 text-sm font-bold text-orange-600 ring-orange-200">
                           {(currentPage - 1) * pageSize + index + 1}
@@ -280,8 +289,12 @@ export default function VideoTestimonials() {
                             <VideoIcon className="w-5 h-5 text-gray-400" />
                           </div>
                           <div>
-                            <p className="font-semibold text-gray-800">{item.title}</p>
-                            <p className="text-xs text-gray-500 mt-1">ID: #{item.id}</p>
+                            <p className="font-semibold text-gray-800">
+                              {item.title}
+                            </p>
+                            <p className="text-xs text-gray-500 mt-1">
+                              ID: #{item.id}
+                            </p>
                           </div>
                         </div>
                       </td>
@@ -300,7 +313,8 @@ export default function VideoTestimonials() {
             <div className="p-4 border-t border-gray-100 flex flex-col sm:flex-row items-center justify-between gap-4 text-sm text-gray-500 bg-gray-50/50">
               <p>
                 Showing {(currentPage - 1) * pageSize + 1} to{" "}
-                {Math.min(currentPage * pageSize, totalItems)} of {totalItems} entries
+                {Math.min(currentPage * pageSize, totalItems)} of {totalItems}{" "}
+                entries
               </p>
               <div className="flex gap-1 overflow-x-auto">
                 <button
@@ -310,21 +324,25 @@ export default function VideoTestimonials() {
                 >
                   Prev
                 </button>
-                {Array.from({ length: totalPages }, (_, i) => i + 1).map((pageNum) => (
-                  <button
-                    key={pageNum}
-                    onClick={() => setCurrentPage(pageNum)}
-                    className={`px-3 py-1 rounded-md transition-colors cursor-pointer ${
-                      pageNum === currentPage
-                        ? "bg-saffron-500 text-white shadow-sm"
-                        : "border border-gray-200 hover:bg-gray-100"
-                    }`}
-                  >
-                    {pageNum}
-                  </button>
-                ))}
+                {Array.from({ length: totalPages }, (_, i) => i + 1).map(
+                  (pageNum) => (
+                    <button
+                      key={pageNum}
+                      onClick={() => setCurrentPage(pageNum)}
+                      className={`px-3 py-1 rounded-md transition-colors cursor-pointer ${
+                        pageNum === currentPage
+                          ? "bg-saffron-500 text-white shadow-sm"
+                          : "border border-gray-200 hover:bg-gray-100"
+                      }`}
+                    >
+                      {pageNum}
+                    </button>
+                  ),
+                )}
                 <button
-                  onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                  onClick={() =>
+                    setCurrentPage((p) => Math.min(totalPages, p + 1))
+                  }
                   disabled={currentPage === totalPages}
                   className="px-3 py-1 border border-gray-200 rounded-md hover:bg-gray-100 disabled:opacity-50 disabled:hover:bg-transparent transition-colors cursor-pointer"
                 >

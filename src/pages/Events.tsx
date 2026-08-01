@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { IMAGEBASEURL } from "../services/api";
+import { BASEURL } from "../services/api";
 import { useNavigate } from "react-router-dom";
 import {
   Plus,
@@ -252,6 +252,13 @@ export default function Events() {
       if (file && file.size > 0) {
         const uploadData = new FormData();
         uploadData.append("image", file);
+        
+        if (editingEvent && editingEvent.image) {
+          uploadData.append("existingimage", editingEvent.image);
+        } else {
+          uploadData.append("existingimage", "");
+        }
+
         const uploadRes = await api.post("/event/uploadimage", uploadData, {
           headers: { "Content-Type": "multipart/form-data" },
         });
@@ -1059,7 +1066,7 @@ export default function Events() {
                                 event.image
                                   ? event.image.startsWith("http")
                                     ? event.image
-                                    : `${IMAGEBASEURL}${event.image}`
+                                    : `${BASEURL}${event.image}`
                                   : "https://images.unsplash.com/photo-1582979512210-99b6a53386f9?auto=format&fit=crop&q=80&w=200&h=200"
                               }
                               alt={event.title}
@@ -1340,7 +1347,7 @@ export default function Events() {
                                 event.image
                                   ? event.image.startsWith("http")
                                     ? event.image
-                                    : `${IMAGEBASEURL}${event.image}`
+                                    : `${BASEURL}${event.image}`
                                   : "https://images.unsplash.com/photo-1582979512210-99b6a53386f9?auto=format&fit=crop&q=80&w=200&h=200"
                               }
                               alt={event.title}

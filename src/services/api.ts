@@ -1,9 +1,10 @@
 import axios from "axios";
 
-export const IMAGEBASEURL = "http://localhost:3003";
+// export const BASEURL = "http://localhost:3003";
+export const BASEURL = "https://api.srikandhagurufoundation.org";
 
 const api = axios.create({
-  baseURL: "https://rpg.791.mytemp.website/api",
+  baseURL: `${BASEURL}/api`,
   headers: {
     "Content-Type": "application/json",
   },

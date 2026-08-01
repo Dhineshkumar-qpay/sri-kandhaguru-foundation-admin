@@ -14,6 +14,7 @@ import Categories from './pages/Categories';
 import Contacts from './pages/Contacts';
 import Reviews from './pages/Reviews';
 import Bookings from './pages/Bookings';
+import Banners from './pages/Banners';
 import Products from './pages/Products';
 import Orders from './pages/Orders';
 import OrderDetail from './pages/OrderDetail';
@@ -43,6 +44,7 @@ function App() {
           <Route path="contacts" element={<Contacts />} />
           <Route path="reviews" element={<Reviews />} />
           <Route path="settings" element={<Settings />} />
+          <Route path="banners" element={<Banners />} />
           <Route path="products" element={<Products />} />
           <Route path="orders" element={<Orders />} />
           <Route path="orders/:id" element={<OrderDetail />} />

@@ -1,16 +1,6 @@
 import React, { useState, useEffect } from "react";
-import { IMAGEBASEURL } from "../services/api";
-import {
-  Plus,
-  Search,
-  Filter,
-  Eye,
-  Edit2,
-  Trash2,
-  Video as VideoIcon,
-  Calendar,
-  X,
-} from "lucide-react";
+import { BASEURL } from "../services/api";
+import { Plus, Search, Eye, Trash2, Calendar, X } from "lucide-react";
 import { motion } from "framer-motion";
 import api from "../services/api";
 
@@ -50,7 +40,6 @@ export default function Videos() {
   const [currentPage, setCurrentPage] = useState(1);
   const [loading, setLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
-  const [thumbnailPreview, setThumbnailPreview] = useState<string | null>(null);
 
   useEffect(() => {
     fetchVideos(currentPage);
@@ -59,8 +48,6 @@ export default function Videos() {
   useEffect(() => {
     if (showForm) {
       fetchCategories();
-    } else {
-      setThumbnailPreview(null);
     }
   }, [showForm]);
 
@@ -100,7 +87,6 @@ export default function Videos() {
     const description = formData.get("description") as string;
     const categoryid = formData.get("categoryid") as string;
     const videourl = formData.get("videourl") as string;
-    const file = formData.get("image") as File;
 
     if (!title || !categoryid || !videourl) {
       alert("Please fill all required fields.");
@@ -112,21 +98,17 @@ export default function Videos() {
     );
     const categoryname = selectedCat ? selectedCat.categoryname : "";
 
-    const uploadData = new FormData();
-    if (file && file.size > 0) {
-      uploadData.append("image", file);
-    }
-    uploadData.append("title", title);
-    uploadData.append("description", description);
-    uploadData.append("categoryid", categoryid);
-    uploadData.append("categoryname", categoryname);
-    uploadData.append("videourl", videourl);
+    const payload = {
+      title,
+      description,
+      categoryid,
+      categoryname,
+      videourl,
+    };
 
     setLoading(true);
     try {
-      const response = await api.post("/video/add", uploadData, {
-        headers: { "Content-Type": "multipart/form-data" },
-      });
+      const response = await api.post("/video/add", payload);
       if (response.data?.success) {
         setShowForm(false);
         setCurrentPage(1);
@@ -257,46 +239,6 @@ export default function Videos() {
                   placeholder="https://www.youtube.com/watch?v=..."
                 />
               </div>
-              <div className="md:col-span-2">
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Thumbnail Image (Optional)
-                </label>
-                <div className="flex items-center justify-center w-full">
-                  <label className="flex flex-col items-center justify-center w-full h-48 border-2 border-dashed border-saffron-200 rounded-xl cursor-pointer bg-saffron-50/30 hover:bg-saffron-50/80 transition-colors overflow-hidden relative">
-                    {thumbnailPreview ? (
-                      <img
-                        src={thumbnailPreview}
-                        alt="Preview"
-                        className="w-full h-full object-contain bg-black"
-                      />
-                    ) : (
-                      <div className="flex flex-col items-center justify-center pt-5 pb-6">
-                        <VideoIcon className="w-8 h-8 text-saffron-400 mb-2" />
-                        <p className="text-sm text-gray-500">
-                          <span className="font-semibold text-saffron-600">
-                            Click to upload thumbnail
-                          </span>{" "}
-                          or drag and drop
-                        </p>
-                      </div>
-                    )}
-                    <input
-                      name="image"
-                      type="file"
-                      className="hidden"
-                      accept="image/*"
-                      onChange={(e) => {
-                        const file = e.target.files?.[0];
-                        if (file) {
-                          setThumbnailPreview(URL.createObjectURL(file));
-                        } else {
-                          setThumbnailPreview(null);
-                        }
-                      }}
-                    />
-                  </label>
-                </div>
-              </div>
             </div>
             <div className="flex justify-end gap-3 pt-4">
               <button
@@ -340,12 +282,20 @@ export default function Videos() {
               <thead>
                 <tr className="bg-gray-50/50 border-b border-gray-100 text-gray-500 text-sm">
                   <th className="px-6 py-4 font-medium">S.No</th>
-                   <th className="px-6 py-4 font-medium text-right">Actions</th>
-                  <th className="px-6 py-4 font-medium">Video Details</th>
+                  <th className="px-6 py-4 font-medium text-right">Actions</th>
+                  <th
+                    className="px-6 py-4 font-medium"
+                    style={{
+                      width: "200px",
+                      minWidth: "300px",
+                      maxWidth: "200px",
+                    }}
+                  >
+                    Video Details
+                  </th>
                   <th className="px-6 py-4 font-medium">Category</th>
                   <th className="px-6 py-4 font-medium">Description</th>
                   <th className="px-6 py-4 font-medium">Date</th>
-                 
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
@@ -365,7 +315,7 @@ export default function Videos() {
                       className="hover:bg-saffron-50/30 transition-colors group"
                     >
                       <td className="px-6 py-4">
-                        <h1 className="flex h-9 w-9 items-center justify-center rounded-full bg-orange-100 text-sm font-bold text-orange-600  ring-orange-200">
+                        <h1 className="flex h-9 w-9 items-center justify-center rounded-full bg-orange-100 text-sm font-bold text-orange-600 ring-orange-200">
                           {index + 1}
                         </h1>
                       </td>
@@ -373,9 +323,11 @@ export default function Videos() {
                         <div className="flex items-center justify-end gap-0 transition-opacity">
                           <a
                             href={
-                              (item.videourl || item.video || "").startsWith("http")
-                                ? (item.videourl || item.video)
-                                : `${IMAGEBASEURL}${item.videourl || item.video}`
+                              (item.videourl || item.video || "").startsWith(
+                                "http",
+                              )
+                                ? item.videourl || item.video
+                                : `${BASEURL}${item.videourl || item.video}`
                             }
                             target="_blank"
                             rel="noreferrer"
@@ -395,26 +347,6 @@ export default function Videos() {
                       </td>
                       <td className="px-6 py-4">
                         <div className="flex items-center gap-4">
-                          <div className="relative w-20 h-14 shrink-0 rounded-lg overflow-hidden bg-gray-100 shadow-sm border border-gray-100">
-                            {item.thumbnail ? (
-                              <img
-                                src={
-                                  item.thumbnail.startsWith("http")
-                                    ? item.thumbnail
-                                    : `${IMAGEBASEURL}${item.thumbnail}`
-                                }
-                                alt={item.title}
-                                className="w-full h-full object-cover"
-                              />
-                            ) : (
-                              <div className="w-full h-full bg-gray-200 flex items-center justify-center">
-                                <VideoIcon className="w-6 h-6 text-gray-400" />
-                              </div>
-                            )}
-                            <div className="absolute inset-0 bg-black/20 flex items-center justify-center">
-                              <VideoIcon className="w-5 h-5 text-white opacity-80" />
-                            </div>
-                          </div>
                           <div>
                             <p className="font-semibold text-gray-800">
                               {item.title}
@@ -453,7 +385,6 @@ export default function Videos() {
                           </span>
                         </div>
                       </td>
-                      
                     </tr>
                   ))
                 )}
@@ -461,7 +392,6 @@ export default function Videos() {
             </table>
           </div>
 
-          {/* Pagination */}
           {meta && meta.totalItems > 0 && (
             <div className="p-4 border-t border-gray-100 flex flex-col sm:flex-row items-center justify-between gap-4 text-sm text-gray-500 bg-gray-50/50">
               <p>

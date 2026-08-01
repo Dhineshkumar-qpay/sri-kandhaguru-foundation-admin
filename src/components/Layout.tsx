@@ -19,6 +19,7 @@ import {
   ShoppingBag,
   ShoppingCart,
   Heart,
+  Monitor,
 } from "lucide-react";
 import { clsx } from "clsx";
 import { motion, AnimatePresence } from "framer-motion";
@@ -43,6 +44,7 @@ const sidebarLinks = [
   { name: "Users", path: "/users", icon: Users },
   { name: "Contacts", path: "/contacts", icon: MessageSquare },
   { name: "Reviews", path: "/reviews", icon: Star },
+  { name: "Banners", path: "/banners", icon: Monitor },
   { name: "Settings", path: "/settings", icon: Settings },
 ];
 

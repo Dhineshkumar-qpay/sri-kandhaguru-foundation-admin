@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { IMAGEBASEURL } from "../services/api";
+import { BASEURL } from "../services/api";
 import { useParams, useNavigate } from "react-router-dom";
 import {
   ArrowLeft,
@@ -103,7 +103,7 @@ export default function EventDetail() {
               event.image
                 ? event.image.startsWith("http")
                   ? event.image
-                  : `${IMAGEBASEURL}${event.image}`
+                  : `${BASEURL}${event.image}`
                 : "https://images.unsplash.com/photo-1582979512210-99b6a53386f9?auto=format&fit=crop&q=80&w=1200&h=400"
             }
             alt={event.title}

@@ -5,7 +5,7 @@ import {
   IndianRupee,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import api from "../services/api";
+import api, { BASEURL } from "../services/api";
 
 interface OrderItem {
   productname: string;
@@ -253,7 +253,7 @@ export default function Orders() {
                                 item.productimage
                                   ? item.productimage.startsWith("http")
                                     ? item.productimage
-                                    : `${IMAGEBASEURL}${item.productimage}`
+                                    : `${BASEURL}${item.productimage}`
                                   : "https://via.placeholder.com/40"
                               }
                               alt={item.productname}
