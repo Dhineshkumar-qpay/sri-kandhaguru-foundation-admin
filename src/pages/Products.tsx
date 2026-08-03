@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { BASEURL } from "../services/api";
-import { Plus, Search, Edit2, Trash2, X, ShoppingBag } from "lucide-react";
+import { Plus, Search, Edit2, Trash2, X } from "lucide-react";
 import { motion } from "framer-motion";
 import api from "../services/api";
 

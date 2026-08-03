@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import {
   Users,
   Calendar,
@@ -52,7 +52,9 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(true);
   const [dateFilter, setDateFilter] = useState("one_month");
   const [revenueData, setRevenueData] = useState<RevenueData[]>([]);
-  const [revenueYear, setRevenueYear] = useState(new Date().getFullYear().toString());
+  const [revenueYear, setRevenueYear] = useState(
+    new Date().getFullYear().toString(),
+  );
 
   useEffect(() => {
     fetchDashboardData(dateFilter);
@@ -197,23 +199,38 @@ export default function Dashboard() {
     { name: "Donations", value: data?.donationrevenue || 0, color: "#F59E0B" },
   ].filter((item) => item.value > 0);
 
-  const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+  const monthNames = [
+    "Jan",
+    "Feb",
+    "Mar",
+    "Apr",
+    "May",
+    "Jun",
+    "Jul",
+    "Aug",
+    "Sep",
+    "Oct",
+    "Nov",
+    "Dec",
+  ];
   const formattedRevenueData = revenueData.map((item) => ({
     name: monthNames[item.month - 1] || "",
     orders: item.orders,
     bookings: item.bookings,
     donations: item.donations,
-    total: item.total
+    total: item.total,
   }));
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-screen">
+        <div className="w-10 h-10 border-4 border-saffron-500 border-t-transparent rounded-full animate-spin"></div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-8 relative">
-      {loading && (
-        <div className="absolute inset-0 bg-white/60 backdrop-blur-sm z-10 flex items-center justify-center rounded-2xl">
-          <div className="w-8 h-8 border-4 border-saffron-500 border-t-transparent rounded-full animate-spin"></div>
-        </div>
-      )}
-
       <div className="flex justify-between items-center">
         <div>
           <h1 className="text-3xl font-bold text-gray-800 tracking-tight">
@@ -328,13 +345,15 @@ export default function Dashboard() {
             <h2 className="text-xl font-bold text-gray-800">
               Traffic & Revenue Overview
             </h2>
-            <select 
+            <select
               value={revenueYear}
               onChange={(e) => setRevenueYear(e.target.value)}
               className="bg-saffron-50 border-none text-sm font-medium text-saffron-800 rounded-lg focus:ring-0 cursor-pointer outline-none"
             >
-              {[2024, 2025, 2026, 2027].map(year => (
-                <option key={year} value={year.toString()}>{year}</option>
+              {[2024, 2025, 2026, 2027].map((year) => (
+                <option key={year} value={year.toString()}>
+                  {year}
+                </option>
               ))}
             </select>
           </div>
@@ -349,23 +368,49 @@ export default function Dashboard() {
                     <stop offset="5%" stopColor="#14B8A6" stopOpacity={0.3} />
                     <stop offset="95%" stopColor="#14B8A6" stopOpacity={0} />
                   </linearGradient>
-                  <linearGradient id="colorBookings" x1="0" y1="0" x2="0" y2="1">
+                  <linearGradient
+                    id="colorBookings"
+                    x1="0"
+                    y1="0"
+                    x2="0"
+                    y2="1"
+                  >
                     <stop offset="5%" stopColor="#6366F1" stopOpacity={0.3} />
                     <stop offset="95%" stopColor="#6366F1" stopOpacity={0} />
                   </linearGradient>
-                  <linearGradient id="colorDonations" x1="0" y1="0" x2="0" y2="1">
+                  <linearGradient
+                    id="colorDonations"
+                    x1="0"
+                    y1="0"
+                    x2="0"
+                    y2="1"
+                  >
                     <stop offset="5%" stopColor="#F59E0B" stopOpacity={0.3} />
                     <stop offset="95%" stopColor="#F59E0B" stopOpacity={0} />
                   </linearGradient>
                 </defs>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f0f0f0" />
-                <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: "#9ca3af", fontSize: 12 }} />
-                <YAxis axisLine={false} tickLine={false} tick={{ fill: "#9ca3af", fontSize: 12 }} />
+                <CartesianGrid
+                  strokeDasharray="3 3"
+                  vertical={false}
+                  stroke="#f0f0f0"
+                />
+                <XAxis
+                  dataKey="name"
+                  axisLine={false}
+                  tickLine={false}
+                  tick={{ fill: "#9ca3af", fontSize: 12 }}
+                />
+                <YAxis
+                  axisLine={false}
+                  tickLine={false}
+                  tick={{ fill: "#9ca3af", fontSize: 12 }}
+                />
                 <Tooltip
-                  formatter={(value: any, name?: any, props?: any) => {
+                  formatter={(value: any, _name?: any, _props?: any) => {
                     // value can be a number, string or an array (for stacked values) so handle generically
                     const raw = Array.isArray(value) ? value[0] : value;
-                    const num = typeof raw === "number" ? raw : Number(raw) || 0;
+                    const num =
+                      typeof raw === "number" ? raw : Number(raw) || 0;
                     return `₹${num.toLocaleString()}`;
                   }}
                   contentStyle={{
@@ -374,9 +419,30 @@ export default function Dashboard() {
                     boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.1)",
                   }}
                 />
-                <Area type="monotone" dataKey="orders" stroke="#14B8A6" strokeWidth={3} fillOpacity={1} fill="url(#colorOrders)" />
-                <Area type="monotone" dataKey="bookings" stroke="#6366F1" strokeWidth={3} fillOpacity={1} fill="url(#colorBookings)" />
-                <Area type="monotone" dataKey="donations" stroke="#F59E0B" strokeWidth={3} fillOpacity={1} fill="url(#colorDonations)" />
+                <Area
+                  type="monotone"
+                  dataKey="orders"
+                  stroke="#14B8A6"
+                  strokeWidth={3}
+                  fillOpacity={1}
+                  fill="url(#colorOrders)"
+                />
+                <Area
+                  type="monotone"
+                  dataKey="bookings"
+                  stroke="#6366F1"
+                  strokeWidth={3}
+                  fillOpacity={1}
+                  fill="url(#colorBookings)"
+                />
+                <Area
+                  type="monotone"
+                  dataKey="donations"
+                  stroke="#F59E0B"
+                  strokeWidth={3}
+                  fillOpacity={1}
+                  fill="url(#colorDonations)"
+                />
               </AreaChart>
             </ResponsiveContainer>
           </div>
@@ -406,10 +472,7 @@ export default function Dashboard() {
                     dataKey="value"
                   >
                     {pieData.map((entry, index) => (
-                      <Cell
-                        key={`cell-${index}`}
-                        fill={entry.color}
-                      />
+                      <Cell key={`cell-${index}`} fill={entry.color} />
                     ))}
                   </Pie>
                   <Tooltip

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { Search, Mail, Phone, Calendar, Eye, X } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import api from "../services/api";

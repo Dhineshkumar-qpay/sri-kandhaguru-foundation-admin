@@ -4,8 +4,6 @@ import { useNavigate } from "react-router-dom";
 import {
   Plus,
   Search,
-  Filter,
-  MoreVertical,
   Edit2,
   Trash2,
   Eye,
@@ -13,8 +11,6 @@ import {
   MapPin,
   Users,
   X,
-  Power,
-  PowerOff,
   IndianRupee,
 } from "lucide-react";
 import { motion } from "framer-motion";
@@ -54,14 +50,6 @@ interface Event {
   eventtodate?: string;
 }
 
-interface PaginationMeta {
-  totalItems: number;
-  totalPages: number;
-  currentPage: number;
-  pageSize: number;
-  hasNextPage: boolean;
-  hasPreviousPage: boolean;
-}
 
 const getEventStatusColor = (type: string) => {
   switch (type) {

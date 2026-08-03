@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { Search, Mail, Phone, Calendar } from "lucide-react";
 import api from "../services/api";
 
@@ -145,7 +145,11 @@ export default function Users() {
                         </span>
                         <span className="text-sm text-gray-600 flex items-center gap-2">
                           <Phone className="w-4 h-4 text-gray-400 shrink-0" />
-                          {item.mobile || <span className="text-gray-400 italic">Not provided</span>}
+                          {item.mobile || (
+                            <span className="text-gray-400 italic">
+                              Not provided
+                            </span>
+                          )}
                         </span>
                       </div>
                     </td>
@@ -160,7 +164,7 @@ export default function Users() {
                                   month: "short",
                                   day: "numeric",
                                   year: "numeric",
-                                }
+                                },
                               )
                             : "N/A"}
                         </span>
@@ -203,11 +207,13 @@ export default function Users() {
                   >
                     {pageNum}
                   </button>
-                )
+                ),
               )}
 
               <button
-                onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                onClick={() =>
+                  setCurrentPage((p) => Math.min(totalPages, p + 1))
+                }
                 disabled={currentPage === totalPages}
                 className="px-3 py-1 border border-gray-200 rounded-md hover:bg-gray-100 disabled:opacity-50 disabled:hover:bg-transparent transition-colors cursor-pointer"
               >

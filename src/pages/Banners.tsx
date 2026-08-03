@@ -33,7 +33,7 @@ export default function Banners() {
          response = await api.post("/banner/get");
       }
       
-      if (response.data?.success) {
+      if (response && response.data?.success) {
         setBanners(response.data.data);
       }
     } catch (error) {

@@ -3,9 +3,6 @@ import { BASEURL } from "../services/api";
 import {
   Plus,
   Search,
-  Filter,
-  Eye,
-  Edit2,
   Trash2,
   Image as ImageIcon,
   X,

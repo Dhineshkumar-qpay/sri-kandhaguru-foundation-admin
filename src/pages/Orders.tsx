@@ -27,32 +27,6 @@ interface Order {
   items: OrderItem[];
 }
 
-interface OrderDetail {
-  order: {
-    id: number;
-    userid: number;
-    addressid: number;
-    screenshot: string | null;
-    totalamount: number;
-    paymentstatus: string;
-    orderstatus: string;
-    createdAt: string;
-    updatedAt: string;
-  };
-  address: {
-    id: number;
-    contactname: string;
-    contactnumber: string;
-    address: string;
-    city: string;
-    district: string;
-    state: string;
-    pincode: number;
-    country: string;
-    place: string;
-  };
-  items: OrderItem[];
-}
 
 export default function Orders() {
   const navigate = useNavigate();
