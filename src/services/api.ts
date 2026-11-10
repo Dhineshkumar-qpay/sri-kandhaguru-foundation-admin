@@ -1,7 +1,7 @@
 import axios from "axios";
 
-// export const BASEURL = "http://localhost:3003";
-export const BASEURL = "https://api.srikandhagurufoundation.org";
+export const BASEURL = "http://localhost:3003";
+// export const BASEURL = "https://api.srikandhagurufoundation.org";
 
 const api = axios.create({
   baseURL: `${BASEURL}/api`,

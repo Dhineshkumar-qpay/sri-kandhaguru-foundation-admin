@@ -20,6 +20,14 @@ import {
   ShoppingCart,
   Heart,
   Monitor,
+  ClipboardList,
+  ReceiptText,
+  UserRoundPlus,
+  UserCog,
+  CalendarCheck2,
+  CalendarDays,
+  ClipboardCheck,
+  Clock3,
 } from "lucide-react";
 import { clsx } from "clsx";
 import { motion, AnimatePresence } from "framer-motion";
@@ -32,6 +40,18 @@ interface UserProfile {
 
 const sidebarLinks = [
   { name: "Dashboard", path: "/dashboard", icon: LayoutDashboard },
+  {
+    name: "User Registration",
+    path: "/user-registration",
+    icon: UserRoundPlus,
+  },
+  { name: "Event Registration", path: "/registration", icon: ClipboardList },
+  { name: "Purchase History", path: "/purchase-history", icon: ReceiptText },
+  { name: "Attendance", path: "/attendance", icon: CalendarCheck2 },
+  { name: "Attendance List", path: "/attendance-list", icon: Clock3 },
+  { name: "Staff Leaves", path: "/staff-leaves", icon: CalendarDays },
+  { name: "Leaves", path: "/leaves", icon: ClipboardCheck },
+  { name: "Staffs", path: "/staffs", icon: UserCog },
   { name: "Donations", path: "/donations", icon: Heart },
   { name: "Event Bookings", path: "/bookings", icon: Ticket },
   { name: "Orders", path: "/orders", icon: ShoppingCart },
@@ -53,6 +73,23 @@ export default function Layout() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const location = useLocation();
+  const isStaff = profile?.userType?.toLowerCase() === "staff";
+  const isAdmin = profile?.userType?.toLowerCase() === "admin";
+  const staffVisiblePaths = new Set([
+    "/dashboard",
+    "/user-registration",
+    "/registration",
+    "/purchase-history",
+    "/attendance",
+    "/staff-leaves",
+  ]);
+  const visibleSidebarLinks = sidebarLinks.filter((link) => {
+    if (link.path === "/leaves" && !isAdmin) return false;
+    if (link.path === "/attendance-list" && !isAdmin) return false;
+    if (link.path === "/attendance" && isAdmin) return false;
+    if (link.path === "/staff-leaves" && isAdmin) return false;
+    return !isStaff || staffVisiblePaths.has(link.path);
+  });
 
   useEffect(() => {
     setMobileMenuOpen(false);
@@ -142,7 +179,7 @@ export default function Layout() {
         </button>
 
         <div className="flex-1 overflow-y-auto py-6 px-3 flex flex-col gap-2">
-          {sidebarLinks.map((link) => {
+          {visibleSidebarLinks.map((link) => {
             const Icon = link.icon;
             const isActive = location.pathname.startsWith(link.path);
 

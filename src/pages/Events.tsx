@@ -88,6 +88,42 @@ export default function Events() {
   const [pendingEventType, setPendingEventType] = useState<Record<number, string>>({});
   const [updatingEventTypeId, setUpdatingEventTypeId] = useState<number | null>(null);
 
+  const [pendingParticipants, setPendingParticipants] = useState<Record<number, string>>({});
+  const [updatingParticipantsId, setUpdatingParticipantsId] = useState<number | null>(null);
+
+  const handleUpdateParticipants = async (id: number) => {
+    const newParticipants = pendingParticipants[id];
+    if (!newParticipants) return;
+    setUpdatingParticipantsId(id);
+    try {
+      const response = await api.post("/event/update-participants", {
+        id,
+        participants: Number(newParticipants),
+      });
+      if (response.data?.success || response.status === 200 || response.status === 201) {
+        setLevel1Events(
+          level1Events.map((ev) => (ev.id === id ? { ...ev, participants: Number(newParticipants) } : ev))
+        );
+        setLevel2Events(
+          level2Events.map((ev) => (ev.id === id ? { ...ev, participants: Number(newParticipants) } : ev))
+        );
+        setPendingParticipants((prev) => {
+          const next = { ...prev };
+          delete next[id];
+          return next;
+        });
+        alert(response.data?.data || "Participants updated successfully");
+      } else {
+        alert("Failed to update participants.");
+      }
+    } catch (err) {
+      console.error("Error updating participants:", err);
+      alert("An error occurred while updating.");
+    } finally {
+      setUpdatingParticipantsId(null);
+    }
+  };
+
   const handleUpdateEventType = async (id: number) => {
     const newType = pendingEventType[id];
     if (!newType) return;
@@ -972,6 +1008,7 @@ export default function Events() {
                   <tr className="bg-gray-50/50 border-b border-gray-100 text-gray-500 text-sm">
                     <th className="px-6 py-4 font-medium">S.No</th>
                     <th className="px-6 py-4 font-medium">Actions</th>
+                    <th className="px-6 py-4 font-medium">Participants</th>
                     <th className="px-6 py-4 font-medium min-w-[300px]">
                       Event Details
                     </th>
@@ -1045,6 +1082,33 @@ export default function Events() {
                             >
                               <Trash2 className="w-4 h-4" />
                             </button>
+                          </div>
+                        </td>
+                        <td className="px-6 py-4">
+                          <div className="flex flex-col gap-2">
+                            <input
+                              type="number"
+                              min="0"
+                              className="text-xs border border-gray-200 rounded-lg px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-saffron-500 bg-white min-w-[80px]"
+                              value={pendingParticipants[event.id] !== undefined ? pendingParticipants[event.id] : (event.participants || 0)}
+                              onChange={(e) => setPendingParticipants({ ...pendingParticipants, [event.id]: e.target.value })}
+                            />
+                            {pendingParticipants[event.id] !== undefined && pendingParticipants[event.id] !== String(event.participants || 0) && (
+                              <button
+                                onClick={() => handleUpdateParticipants(event.id)}
+                                disabled={updatingParticipantsId === event.id}
+                                className="text-[10px] uppercase font-bold tracking-wider bg-saffron-500 text-white px-2 py-1 rounded-md hover:bg-saffron-600 transition-colors shadow-sm w-full cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-1"
+                              >
+                                {updatingParticipantsId === event.id ? (
+                                  <>
+                                    <span className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
+                                    Wait
+                                  </>
+                                ) : (
+                                  "Update"
+                                )}
+                              </button>
+                            )}
                           </div>
                         </td>
                         <td className="px-6 py-4">
@@ -1253,6 +1317,7 @@ export default function Events() {
                   <tr className="bg-gray-50/50 border-b border-gray-100 text-gray-500 text-sm">
                     <th className="px-6 py-4 font-medium">S.No</th>
                     <th className="px-6 py-4 font-medium">Actions</th>
+                    <th className="px-6 py-4 font-medium">Participants</th>
                     <th className="px-6 py-4 font-medium min-w-[300px]">
                       Event Details
                     </th>
@@ -1326,6 +1391,33 @@ export default function Events() {
                             >
                               <Trash2 className="w-4 h-4" />
                             </button>
+                          </div>
+                        </td>
+                        <td className="px-6 py-4">
+                          <div className="flex flex-col gap-2">
+                            <input
+                              type="number"
+                              min="0"
+                              className="text-xs border border-gray-200 rounded-lg px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-saffron-500 bg-white min-w-[80px]"
+                              value={pendingParticipants[event.id] !== undefined ? pendingParticipants[event.id] : (event.participants || 0)}
+                              onChange={(e) => setPendingParticipants({ ...pendingParticipants, [event.id]: e.target.value })}
+                            />
+                            {pendingParticipants[event.id] !== undefined && pendingParticipants[event.id] !== String(event.participants || 0) && (
+                              <button
+                                onClick={() => handleUpdateParticipants(event.id)}
+                                disabled={updatingParticipantsId === event.id}
+                                className="text-[10px] uppercase font-bold tracking-wider bg-saffron-500 text-white px-2 py-1 rounded-md hover:bg-saffron-600 transition-colors shadow-sm w-full cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-1"
+                              >
+                                {updatingParticipantsId === event.id ? (
+                                  <>
+                                    <span className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
+                                    Wait
+                                  </>
+                                ) : (
+                                  "Update"
+                                )}
+                              </button>
+                            )}
                           </div>
                         </td>
                         <td className="px-6 py-4">

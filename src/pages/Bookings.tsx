@@ -68,7 +68,9 @@ export default function Bookings() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [updatingStatusId, setUpdatingStatusId] = useState<number | null>(null);
   const [sidebarStatus, setSidebarStatus] = useState<string>("");
-  const [pendingBookingStatus, setPendingBookingStatus] = useState<Record<number, string>>({});
+  const [pendingBookingStatus, setPendingBookingStatus] = useState<
+    Record<number, string>
+  >({});
 
   useEffect(() => {
     if (selectedBooking) {
@@ -381,12 +383,12 @@ export default function Bookings() {
             <tr className="bg-gray-50/50 border-b border-gray-100 text-gray-500 text-sm">
               <th className="px-6 py-4 font-medium">S.No</th>
               <th className="px-6 py-4 font-medium text-right">Actions</th>
+              <th className="px-6 py-4 font-medium">Booking Status</th>
               <th className="px-6 py-4 font-medium">Participant</th>
               <th className="px-6 py-4 font-medium">Eventname</th>
               <th className="px-6 py-4 font-medium">Count</th>
               <th className="px-6 py-4 font-medium">Amount</th>
               <th className="px-6 py-4 font-medium text-center">Screenshot</th>
-              <th className="px-6 py-4 font-medium">Booking Status</th>
               <th className="px-6 py-4 font-medium">
                 {title === "Online" ? "Booking Date" : "Date"}
               </th>
@@ -428,6 +430,70 @@ export default function Bookings() {
                     >
                       <Eye className="w-4 h-4" />
                     </button>
+                  </td>
+                  <td className="px-6 py-4">
+                    <div className="flex flex-col gap-2">
+                      <select
+                        className={`text-xs border border-gray-200 rounded-lg px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-saffron-500 capitalize bg-white min-w-[100px] cursor-pointer ${
+                          pendingBookingStatus[booking.id] ||
+                          booking.bookingstatus === "success" ||
+                          pendingBookingStatus[booking.id] ||
+                          booking.bookingstatus === "completed" ||
+                          pendingBookingStatus[booking.id] ||
+                          booking.bookingstatus === "confirmed"
+                            ? "text-emerald-600"
+                            : pendingBookingStatus[booking.id] ||
+                                booking.bookingstatus === "pending"
+                              ? "text-amber-600"
+                              : "text-red-600"
+                        }`}
+                        value={
+                          pendingBookingStatus[booking.id] ||
+                          booking.bookingstatus
+                        }
+                        onChange={(e) =>
+                          setPendingBookingStatus({
+                            ...pendingBookingStatus,
+                            [booking.id]: e.target.value,
+                          })
+                        }
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <option value="pending" className="text-amber-600">
+                          Pending
+                        </option>
+                        <option value="confirmed" className="text-emerald-600">
+                          Confirmed
+                        </option>
+                        <option value="cancelled" className="text-red-600">
+                          Cancelled
+                        </option>
+                      </select>
+                      {pendingBookingStatus[booking.id] &&
+                        pendingBookingStatus[booking.id] !==
+                          booking.bookingstatus && (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleStatusUpdate(
+                                booking.id,
+                                pendingBookingStatus[booking.id],
+                              );
+                            }}
+                            disabled={updatingStatusId === booking.id}
+                            className="text-[10px] uppercase font-bold tracking-wider bg-saffron-500 text-white px-2 py-1 rounded-md hover:bg-saffron-600 transition-colors shadow-sm w-full cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-1"
+                          >
+                            {updatingStatusId === booking.id ? (
+                              <>
+                                <span className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
+                                Wait
+                              </>
+                            ) : (
+                              "Confirm"
+                            )}
+                          </button>
+                        )}
+                    </div>
                   </td>
                   <td className="px-6 py-4">
                     <p className="font-semibold text-gray-800 text-md">
@@ -490,48 +556,7 @@ export default function Bookings() {
                       <span className="text-gray-400 text-xs">-</span>
                     )}
                   </td>
-                  <td className="px-6 py-4">
-                    <div className="flex flex-col gap-2">
-                      <select
-                        className={`text-xs border border-gray-200 rounded-lg px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-saffron-500 capitalize bg-white min-w-[100px] cursor-pointer ${
-                          pendingBookingStatus[booking.id] || booking.bookingstatus === "success" || pendingBookingStatus[booking.id] || booking.bookingstatus === "completed" || pendingBookingStatus[booking.id] || booking.bookingstatus === "confirmed" ? "text-emerald-600" :
-                          pendingBookingStatus[booking.id] || booking.bookingstatus === "pending" ? "text-amber-600" : "text-red-600"
-                        }`}
-                        value={pendingBookingStatus[booking.id] || booking.bookingstatus}
-                        onChange={(e) =>
-                          setPendingBookingStatus({
-                            ...pendingBookingStatus,
-                            [booking.id]: e.target.value,
-                          })
-                        }
-                        onClick={(e) => e.stopPropagation()}
-                      >
-                        <option value="pending" className="text-amber-600">Pending</option>
-                        <option value="confirmed" className="text-emerald-600">Confirmed</option>
-                        <option value="cancelled" className="text-red-600">Cancelled</option>
-                      </select>
-                      {pendingBookingStatus[booking.id] &&
-                        pendingBookingStatus[booking.id] !== booking.bookingstatus && (
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleStatusUpdate(booking.id, pendingBookingStatus[booking.id]);
-                            }}
-                            disabled={updatingStatusId === booking.id}
-                            className="text-[10px] uppercase font-bold tracking-wider bg-saffron-500 text-white px-2 py-1 rounded-md hover:bg-saffron-600 transition-colors shadow-sm w-full cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-1"
-                          >
-                            {updatingStatusId === booking.id ? (
-                              <>
-                                <span className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
-                                Wait
-                              </>
-                            ) : (
-                              "Confirm"
-                            )}
-                          </button>
-                        )}
-                    </div>
-                  </td>
+
                   <td className="px-6 py-4">
                     <div className="flex items-center gap-2 text-sm text-gray-600">
                       <Calendar className="w-4 h-4 text-saffron-500 shrink-0" />
@@ -613,30 +638,6 @@ export default function Bookings() {
 
       <div className="bg-white rounded-2xl shadow-elegant border border-saffron-50/50 overflow-hidden">
         {renderFilters(
-          "Online",
-          onlineSearchTerm,
-          setOnlineSearchTerm,
-          onlineEventId,
-          setOnlineEventId,
-          onlineStartDate,
-          setOnlineStartDate,
-          onlineEndDate,
-          setOnlineEndDate,
-          fetchOnlineBookings,
-          setCurrentPageOnline,
-        )}
-        {renderTable(
-          "Online",
-          paginatedOnlineBookings,
-          totalOnlineItems,
-          currentPageOnline,
-          totalOnlinePages,
-          setCurrentPageOnline,
-        )}
-      </div>
-
-      <div className="bg-white rounded-2xl shadow-elegant border border-saffron-50/50 overflow-hidden mt-8">
-        {renderFilters(
           "Offline",
           offlineSearchTerm,
           setOfflineSearchTerm,
@@ -656,6 +657,30 @@ export default function Bookings() {
           currentPageOffline,
           totalOfflinePages,
           setCurrentPageOffline,
+        )}
+      </div>
+
+      <div className="bg-white rounded-2xl shadow-elegant border border-saffron-50/50 overflow-hidden mt-8">
+        {renderFilters(
+          "Online",
+          onlineSearchTerm,
+          setOnlineSearchTerm,
+          onlineEventId,
+          setOnlineEventId,
+          onlineStartDate,
+          setOnlineStartDate,
+          onlineEndDate,
+          setOnlineEndDate,
+          fetchOnlineBookings,
+          setCurrentPageOnline,
+        )}
+        {renderTable(
+          "Online",
+          paginatedOnlineBookings,
+          totalOnlineItems,
+          currentPageOnline,
+          totalOnlinePages,
+          setCurrentPageOnline,
         )}
       </div>
 
