@@ -598,7 +598,7 @@ export default function Staffs() {
                               {staff.username}
                             </p>
                             <p className="text-xs text-gray-500">
-                              ID: #{staff.userid}
+                              ID: {staff.userid}
                             </p>
                           </div>
                         </div>

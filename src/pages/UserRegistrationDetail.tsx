@@ -258,7 +258,7 @@ export default function UserRegistrationDetail() {
         <div>
           <h1 className="text-3xl font-bold text-gray-800">User Details</h1>
           <p className="mt-1 text-gray-500">
-            User registration, event registrations, and purchase history.
+            User registration, event registrations, and sales history.
           </p>
         </div>
       </div>
@@ -299,7 +299,7 @@ export default function UserRegistrationDetail() {
                   {user.fullname}
                 </h2>
                 <p className="mt-1 text-gray-600">
-                  Customer ID: #{user.id}
+                  Customer ID: {user.id}
                   {user.mobile ? ` · ${user.mobile}` : ""}
                 </p>
                 {user.email && (
@@ -699,7 +699,7 @@ export default function UserRegistrationDetail() {
             <div className="flex flex-col gap-2 border-b border-gray-100 p-6 sm:flex-row sm:items-center sm:justify-between">
               <div>
                 <h3 className="text-sm font-bold uppercase tracking-wider text-gray-700">
-                  Purchase History
+                  Sales History
                 </h3>
                 <p className="mt-1 text-sm text-gray-500">
                   {purchases.length} record{purchases.length === 1 ? "" : "s"} ·{" "}

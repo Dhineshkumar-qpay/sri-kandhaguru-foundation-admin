@@ -132,7 +132,7 @@ export default function Users() {
                             {item.username}
                           </span>
                           <span className="text-xs text-gray-500">
-                            ID: #{item.userid}
+                            ID: {item.userid}
                           </span>
                         </div>
                       </div>

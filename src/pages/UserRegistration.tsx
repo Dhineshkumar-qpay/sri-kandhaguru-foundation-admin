@@ -401,7 +401,7 @@ export default function UserRegistration() {
         <div className="mb-4">
           <h2 className="text-lg font-bold text-gray-800">Search Customer</h2>
           <p className="mt-1 text-sm text-gray-500">
-            Find a registered customer to view their registration and purchase history.
+            Find a registered customer to view their registration and sales history.
           </p>
         </div>
         <div className="relative">
@@ -464,7 +464,7 @@ export default function UserRegistration() {
                       {customer.fullname}
                     </span>
                     <span className="block text-xs text-gray-500">
-                      {[customer.mobile, `ID: #${customer.id}`]
+                      {[customer.mobile, `ID: ${customer.id}`]
                         .filter(Boolean)
                         .join(" · ")}
                     </span>
@@ -821,7 +821,7 @@ export default function UserRegistration() {
                               {registration.fullname}
                             </p>
                             <p className="text-xs text-gray-500">
-                              ID: #{registration.id}
+                              ID: {registration.id}
                             </p>
                           </div>
                         </div>

@@ -44,6 +44,10 @@ interface PurchaseRecord {
   id: number;
   registerid: number;
   totalamount: number;
+  deliverystatus?: string | null;
+  courierstatus?: string | null;
+  cashamount?: number | string | null;
+  upiamount?: number | string | null;
   createdAt: string;
   registration?: RegisteredUser;
 }
@@ -78,6 +82,30 @@ const formatCurrency = (value: number | string | null | undefined) => {
   })}`;
 };
 
+const getDeliveryStatusClassName = (status: string | null | undefined) => {
+  switch (status?.toLowerCase()) {
+    case "packed":
+      return "bg-amber-100 text-amber-800 ring-amber-200";
+    case "shipped":
+      return "bg-blue-100 text-blue-800 ring-blue-200";
+    case "delivered":
+      return "bg-green-100 text-green-800 ring-green-200";
+    default:
+      return "bg-gray-100 text-gray-700 ring-gray-200";
+  }
+};
+
+const getCourierStatusClassName = (status: string | null | undefined) => {
+  switch (status?.toLowerCase()) {
+    case "courier":
+      return "bg-indigo-100 text-indigo-800 ring-indigo-200";
+    case "directpayment":
+      return "bg-purple-100 text-purple-800 ring-purple-200";
+    default:
+      return "bg-gray-100 text-gray-700 ring-gray-200";
+  }
+};
+
 const getCurrentMonthDateRange = () => {
   const now = new Date();
   const yearMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
@@ -98,6 +126,10 @@ export default function PurchaseHistory() {
   const [purchaseItems, setPurchaseItems] = useState<PurchaseItemForm[]>([
     { productid: "", quantity: "1" },
   ]);
+  const [courierStatus, setCourierStatus] = useState<
+    "courier" | "directpayment"
+  >("courier");
+  const [cashAmount, setCashAmount] = useState("");
   const [userSearch, setUserSearch] = useState("");
   const [selectedUser, setSelectedUser] = useState<RegisteredUser | null>(null);
   const [userResults, setUserResults] = useState<RegisteredUser[]>([]);
@@ -119,6 +151,7 @@ export default function PurchaseHistory() {
   const [deletingId, setDeletingId] = useState<number | null>(null);
   const [formError, setFormError] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
+  const [courierStatusFilter, setCourierStatusFilter] = useState("");
   const [dateRange, setDateRange] = useState(getCurrentMonthDateRange);
   const [currentPage, setCurrentPage] = useState(1);
   const pageSize = 10;
@@ -140,7 +173,7 @@ export default function PurchaseHistory() {
           setIsAdmin(response.data.data.userType?.toLowerCase() === "admin");
         }
       } catch (requestError) {
-        console.error("Failed to load purchase history permissions", requestError);
+        console.error("Failed to load sales history permissions", requestError);
       }
     };
 
@@ -254,7 +287,7 @@ export default function PurchaseHistory() {
           setStaffs(Array.isArray(response.data.data) ? response.data.data : []);
         }
       } catch (requestError) {
-        console.error("Failed to load staff for purchase history filter", requestError);
+        console.error("Failed to load staff for sales history filter", requestError);
         if (active) {
           setLoadError(
             requestError instanceof Error && requestError.message
@@ -328,19 +361,34 @@ export default function PurchaseHistory() {
       (Number(product?.price) || 0) * (Number(item.quantity) || 0)
     );
   }, 0);
+  const balanceAmount = Math.max(0, totalAmount - (Number(cashAmount) || 0));
   const purchasePaymentLink = useMemo(() => {
-    if (formMode !== "purchase" || totalAmount <= 0) return "";
+    if (formMode !== "purchase") return "";
+    const qrAmount =
+      editingPurchaseId === null
+        ? cashAmount === ""
+          ? 0
+          : balanceAmount
+        : totalAmount;
+    if (qrAmount <= 0) return "";
     const params = new URLSearchParams({
       pa: "9345405549@ybl",
       pn: "Sri Kandhaguru Foundation",
-      am: totalAmount.toFixed(2),
+      am: qrAmount.toFixed(2),
       cu: "INR",
       tn: selectedUser
         ? `Purchase - ${selectedUser.fullname}`
         : "Purchase",
     });
     return `upi://pay?${params.toString()}`;
-  }, [formMode, selectedUser, totalAmount]);
+  }, [
+    formMode,
+    editingPurchaseId,
+    cashAmount,
+    balanceAmount,
+    totalAmount,
+    selectedUser,
+  ]);
 
   useEffect(() => {
     let active = true;
@@ -373,12 +421,16 @@ export default function PurchaseHistory() {
   }, [purchasePaymentLink]);
   const filteredPurchases = purchases.filter((purchase) => {
     const query = searchTerm.trim().toLowerCase();
-    return (
+    const matchesSearch = (
       purchase.id.toString().includes(query) ||
       purchase.registerid.toString().includes(query) ||
       purchase.registration?.fullname.toLowerCase().includes(query) ||
       (purchase.registration?.mobile ?? "").includes(query)
     );
+    const matchesCourierStatus =
+      !courierStatusFilter ||
+      purchase.courierstatus?.toLowerCase() === courierStatusFilter;
+    return matchesSearch && matchesCourierStatus;
   });
   const totalPurchaseAmount = filteredPurchases.reduce(
     (total, purchase) => total + (Number(purchase.totalamount) || 0),
@@ -402,6 +454,10 @@ export default function PurchaseHistory() {
           ? new Date(purchase.createdAt).toLocaleDateString("en-IN")
           : "",
         "Total Amount": Number(purchase.totalamount) || 0,
+        "Delivery Status": purchase.deliverystatus || "",
+        "Courier Status": purchase.courierstatus || "",
+        "Cash Amount": Number(purchase.cashamount) || 0,
+        "UPI Amount": Number(purchase.upiamount) || 0,
       })),
     );
   };
@@ -410,6 +466,8 @@ export default function PurchaseHistory() {
     setFormMode(null);
     setEditingPurchaseId(null);
     setPurchaseItems([{ productid: "", quantity: "1" }]);
+    setCourierStatus("courier");
+    setCashAmount("");
     setUserSearch("");
     setSelectedUser(null);
     setUserResults([]);
@@ -520,6 +578,21 @@ export default function PurchaseHistory() {
       setFormError("Select a product and valid quantity for each item.");
       return;
     }
+    if (editingPurchaseId === null) {
+      const enteredCashAmount = Number(cashAmount);
+      if (
+        cashAmount === "" ||
+        !Number.isFinite(enteredCashAmount) ||
+        enteredCashAmount < 0
+      ) {
+        setFormError("Enter a valid non-negative cash amount.");
+        return;
+      }
+      if (enteredCashAmount > totalAmount) {
+        setFormError("Cash amount cannot be greater than the purchase total.");
+        return;
+      }
+    }
 
     setSavingPurchase(true);
     try {
@@ -528,6 +601,13 @@ export default function PurchaseHistory() {
         {
           ...(editingPurchaseId === null ? {} : { id: editingPurchaseId }),
           registerid: selectedUser.id,
+          ...(editingPurchaseId === null
+            ? {
+                courierstatus: courierStatus,
+                cashamount: Number(cashAmount),
+                upiamount: balanceAmount,
+              }
+            : {}),
           products: purchaseItems.map((item) => ({
             productid: Number(item.productid),
             quantity: Number(item.quantity),
@@ -597,7 +677,7 @@ export default function PurchaseHistory() {
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
           <h1 className="text-3xl font-bold text-gray-800">
-            Purchase History
+            Sales History
           </h1>
           <p className="text-gray-500 mt-1">
             Manage and view product purchases.
@@ -621,7 +701,7 @@ export default function PurchaseHistory() {
             className="bg-saffron-500 hover:bg-saffron-600 text-white px-6 py-2.5 rounded-xl font-medium flex items-center gap-2 shadow-lg shadow-saffron-500/30 transition-all active:scale-95 cursor-pointer"
           >
             <Plus className="w-5 h-5" />
-            Add Purchase
+            Add Sales
           </button>
         </div>
       </div>
@@ -727,7 +807,7 @@ export default function PurchaseHistory() {
         >
           <div className="flex justify-between items-center mb-6">
             <h2 className="text-xl font-bold text-gray-800">
-              {editingPurchaseId === null ? "Add Purchase" : "Edit Purchase"}
+              {editingPurchaseId === null ? "Add Sales" : "Edit Purchase"}
             </h2>
             <button
               type="button"
@@ -835,6 +915,41 @@ export default function PurchaseHistory() {
               </p>
             )}
           </div>
+
+          {editingPurchaseId === null && (
+            <fieldset className="space-y-2">
+              <legend className="block text-sm font-medium text-gray-700">
+                Courier Status *
+              </legend>
+              <div className="flex flex-wrap gap-3">
+                {[
+                  { value: "courier", label: "Courier" },
+                  { value: "directpayment", label: "Direct Payment" },
+                ].map((option) => (
+                  <label
+                    key={option.value}
+                    className="flex cursor-pointer items-center gap-2 rounded-xl border border-gray-200 px-4 py-2.5 text-sm font-medium text-gray-700 hover:border-saffron-300"
+                  >
+                    <input
+                      type="radio"
+                      name="purchase-courier-status"
+                      value={option.value}
+                      checked={courierStatus === option.value}
+                      onChange={() =>
+                        setCourierStatus(
+                          option.value === "courier"
+                            ? "courier"
+                            : "directpayment",
+                        )
+                      }
+                      className="h-4 w-4 accent-orange-500"
+                    />
+                    {option.label}
+                  </label>
+                ))}
+              </div>
+            </fieldset>
+          )}
 
           <div className="space-y-4">
             <div className="flex items-center justify-between gap-3">
@@ -979,7 +1094,78 @@ export default function PurchaseHistory() {
             </div>
           </div>
 
-          {totalAmount > 0 && (
+          {editingPurchaseId === null && (
+            <div className="space-y-4">
+              <div className="w-full sm:ml-auto sm:w-64">
+                <label
+                  htmlFor="purchase-cash-amount"
+                  className="mb-1 block text-sm font-medium text-gray-700"
+                >
+                  Cash Amount *
+                </label>
+                <input
+                  id="purchase-cash-amount"
+                  type="number"
+                  min="0"
+                  max={totalAmount}
+                  step="0.01"
+                  required
+                  value={cashAmount}
+                  onChange={(event) => {
+                    setCashAmount(event.target.value);
+                    setFormError("");
+                  }}
+                  className={fieldClassName}
+                  placeholder="0.00"
+                />
+              </div>
+              {cashAmount !== "" && (
+                <section className="flex flex-col items-center rounded-2xl border border-saffron-100 bg-orange-50/40 p-6 text-center">
+                  <h3 className="text-lg font-bold text-gray-800">
+                    Balance Amount
+                  </h3>
+                  <p className="mt-1 text-2xl font-bold text-saffron-700">
+                    {formatCurrency(balanceAmount)}
+                  </p>
+                  {balanceAmount > 0 && (
+                    <>
+                      <p className="mt-2 text-sm text-gray-500">
+                        Scan to pay the remaining balance using a UPI app.
+                      </p>
+                      {purchaseQrCode ? (
+                        <div className="mt-4 rounded-2xl border border-gray-100 bg-white p-3 shadow-sm">
+                          <img
+                            src={purchaseQrCode}
+                            alt={`UPI payment QR for ${formatCurrency(balanceAmount)}`}
+                            className="h-64 w-64 rounded-xl"
+                          />
+                        </div>
+                      ) : qrError ? (
+                        <p role="alert" className="mt-4 text-sm text-red-600">
+                          {qrError}
+                        </p>
+                      ) : (
+                        <div
+                          role="status"
+                          className="mt-4 flex h-64 w-64 items-center justify-center rounded-2xl bg-white text-sm text-gray-500"
+                        >
+                          Preparing payment QR...
+                        </div>
+                      )}
+                      <p className="mt-3 text-xs text-gray-500">
+                        UPI ID:{" "}
+                        <span className="font-semibold text-gray-700">
+                          9345405549@ybl
+                        </span>
+                      </p>
+                    </>
+                  )}
+                </section>
+              )}
+            </div>
+          )}
+
+          {editingPurchaseId !== null && totalAmount > 0 && (
             <section className="flex flex-col items-center rounded-2xl border border-saffron-100 bg-orange-50/40 p-6 text-center">
               <h3 className="text-lg font-bold text-gray-800">
                 Scan to Pay
@@ -1126,6 +1312,19 @@ export default function PurchaseHistory() {
               }
               className="w-full sm:w-auto px-4 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-saffron-500/50 text-sm bg-white"
             />
+            <select
+              aria-label="Filter purchases by courier status"
+              value={courierStatusFilter}
+              onChange={(event) => {
+                setCourierStatusFilter(event.target.value);
+                setCurrentPage(1);
+              }}
+              className="w-full sm:w-auto px-4 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-saffron-500/50 text-sm bg-white"
+            >
+              <option value="">All courier statuses</option>
+              <option value="courier">Courier</option>
+              <option value="directpayment">Direct Payment</option>
+            </select>
             {isAdmin && (
               <select
                 aria-label="Filter purchases by staff"
@@ -1165,7 +1364,7 @@ export default function PurchaseHistory() {
                 <div className="w-8 h-8 border-4 border-saffron-500 border-t-transparent rounded-full animate-spin"></div>
               </div>
             )}
-            <table className="w-full text-left border-collapse min-w-[900px]">
+            <table className="w-full text-left border-collapse min-w-[1400px]">
               <thead>
                 <tr className="bg-gray-50/50 border-b border-gray-100 text-gray-500 text-sm">
                   <th className="px-6 py-4 font-medium">S.No</th>
@@ -1174,13 +1373,17 @@ export default function PurchaseHistory() {
                   <th className="px-6 py-4 font-medium">Mobile</th>
                   <th className="px-6 py-4 font-medium">Purchase Date</th>
                   <th className="px-6 py-4 font-medium">Total Amount</th>
+                  <th className="px-6 py-4 font-medium">Delivery Status</th>
+                  <th className="px-6 py-4 font-medium">Courier Status</th>
+                  <th className="px-6 py-4 font-medium">Cash Amount</th>
+                  <th className="px-6 py-4 font-medium">UPI Amount</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
                 {currentPurchases.length === 0 && !loading ? (
                   <tr>
                     <td
-                      colSpan={7}
+                      colSpan={10}
                       className="px-6 py-8 text-center text-gray-500"
                     >
                       No purchases found.
@@ -1242,7 +1445,7 @@ export default function PurchaseHistory() {
                             `User #${purchase.registerid}`}
                         </span>
                         <span className="text-xs text-gray-500">
-                          ID: #{purchase.registerid}
+                          ID: {purchase.registerid}
                         </span>
                       </td>
                       <td className="px-6 py-4">
@@ -1256,6 +1459,26 @@ export default function PurchaseHistory() {
                       </td>
                       <td className="px-6 py-4">
                         ₹{Number(purchase.totalamount || 0).toLocaleString("en-IN")}
+                      </td>
+                      <td className="px-6 py-4">
+                        <span
+                          className={`inline-flex rounded-full px-2.5 py-1 text-xs font-semibold capitalize ring-1 ring-inset ${getDeliveryStatusClassName(purchase.deliverystatus)}`}
+                        >
+                          {purchase.deliverystatus || "—"}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4">
+                        <span
+                          className={`inline-flex rounded-full px-2.5 py-1 text-xs font-semibold capitalize ring-1 ring-inset ${getCourierStatusClassName(purchase.courierstatus)}`}
+                        >
+                          {purchase.courierstatus || "—"}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4">
+                        {formatCurrency(purchase.cashamount)}
+                      </td>
+                      <td className="px-6 py-4">
+                        {formatCurrency(purchase.upiamount)}
                       </td>
                     </tr>
                   ))

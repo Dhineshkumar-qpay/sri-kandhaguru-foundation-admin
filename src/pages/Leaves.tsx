@@ -298,7 +298,7 @@ export default function Leaves() {
                         {leave.username || `Staff #${leave.userid}`}
                       </p>
                       <p className="mt-0.5 text-xs text-gray-500">
-                        ID: #{leave.userid}
+                        ID: {leave.userid}
                       </p>
                     </td>
                     <td className="px-6 py-4 text-sm text-gray-700">

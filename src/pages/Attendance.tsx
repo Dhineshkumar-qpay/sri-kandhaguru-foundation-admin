@@ -391,7 +391,7 @@ export default function Attendance() {
                 {pageLoading ? "Loading..." : profile?.username || "—"}
               </h2>
               {profile?.userid && (
-                <p className="text-xs text-gray-500">Staff ID: #{profile.userid}</p>
+                <p className="text-xs text-gray-500">Staff ID: {profile.userid}</p>
               )}
             </div>
           </div>

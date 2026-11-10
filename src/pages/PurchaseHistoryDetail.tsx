@@ -16,6 +16,10 @@ interface PurchaseDetail {
   id: number;
   registerid: number;
   totalamount: number;
+  deliverystatus?: string | null;
+  courierstatus?: string | null;
+  cashamount?: number | string | null;
+  upiamount?: number | string | null;
   createdAt: string;
   updatedAt: string;
   products: {
@@ -51,6 +55,30 @@ const formatCurrency = (value: number) =>
     maximumFractionDigits: 2,
   })}`;
 
+const getDeliveryStatusClassName = (status: string | null | undefined) => {
+  switch (status?.toLowerCase()) {
+    case "packed":
+      return "bg-amber-100 text-amber-800 ring-amber-200";
+    case "shipped":
+      return "bg-blue-100 text-blue-800 ring-blue-200";
+    case "delivered":
+      return "bg-green-100 text-green-800 ring-green-200";
+    default:
+      return "bg-gray-100 text-gray-700 ring-gray-200";
+  }
+};
+
+const getCourierStatusClassName = (status: string | null | undefined) => {
+  switch (status?.toLowerCase()) {
+    case "courier":
+      return "bg-indigo-100 text-indigo-800 ring-indigo-200";
+    case "directpayment":
+      return "bg-purple-100 text-purple-800 ring-purple-200";
+    default:
+      return "bg-gray-100 text-gray-700 ring-gray-200";
+  }
+};
+
 const formatDate = (value: string) => {
   const date = new Date(value);
   return Number.isNaN(date.getTime())
@@ -70,6 +98,11 @@ export default function PurchaseHistoryDetail() {
   const [purchase, setPurchase] = useState<PurchaseDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [deliveryStatus, setDeliveryStatus] = useState<
+    "packed" | "shipped" | "delivered"
+  >("packed");
+  const [updatingDeliveryStatus, setUpdatingDeliveryStatus] = useState(false);
+  const [statusMessage, setStatusMessage] = useState("");
 
   useEffect(() => {
     if (!Number.isInteger(purchaseId) || purchaseId <= 0) {
@@ -92,7 +125,15 @@ export default function PurchaseHistoryDetail() {
             response.data?.message || "Unable to load purchase details.",
           );
         }
-        if (active) setPurchase(response.data.data);
+        if (active) {
+          setPurchase(response.data.data);
+          const currentStatus = response.data.data.deliverystatus?.toLowerCase();
+          setDeliveryStatus(
+            currentStatus === "shipped" || currentStatus === "delivered"
+              ? currentStatus
+              : "packed",
+          );
+        }
       } catch (requestError) {
         console.error("Failed to fetch purchase details", requestError);
         if (active) {
@@ -113,19 +154,57 @@ export default function PurchaseHistoryDetail() {
     };
   }, [purchaseId]);
 
+  const handleDeliveryStatusUpdate = async () => {
+    if (!purchase) return;
+
+    setUpdatingDeliveryStatus(true);
+    setError("");
+    setStatusMessage("");
+    try {
+      const response = await api.post<ApiResponse<{ message?: string }>>(
+        "/purchase/update-delivery-status",
+        {
+          id: purchase.id,
+          deliverystatus: deliveryStatus,
+        },
+      );
+      if (!response.data?.success) {
+        throw new Error(
+          response.data?.message || "Unable to update delivery status.",
+        );
+      }
+
+      setPurchase((current) =>
+        current ? { ...current, deliverystatus: deliveryStatus } : current,
+      );
+      setStatusMessage(
+        response.data.data?.message || "Delivery status updated successfully.",
+      );
+    } catch (requestError) {
+      console.error("Failed to update purchase delivery status", requestError);
+      setError(
+        requestError instanceof Error && requestError.message
+          ? requestError.message
+          : "Unable to update delivery status. Please try again.",
+      );
+    } finally {
+      setUpdatingDeliveryStatus(false);
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex items-center gap-4">
         <Link
           to="/purchase-history"
           className="rounded-xl border border-gray-200 p-2 text-gray-600 hover:bg-gray-50"
-          aria-label="Back to purchase history"
+          aria-label="Back to Seles history"
         >
           <ArrowLeft className="h-5 w-5" />
         </Link>
         <div>
           <h1 className="text-3xl font-bold text-gray-800">
-            Purchase Details
+            Sales Details
           </h1>
           <p className="mt-1 text-gray-500">
             View purchase, customer, and product information.
@@ -140,6 +219,14 @@ export default function PurchaseHistoryDetail() {
         >
           <AlertCircle className="mt-0.5 h-5 w-5 shrink-0" />
           <span>{error}</span>
+        </div>
+      )}
+      {statusMessage && (
+        <div
+          role="status"
+          className="rounded-xl border border-green-100 bg-green-50 p-4 text-sm text-green-700"
+        >
+          {statusMessage}
         </div>
       )}
 
@@ -161,10 +248,10 @@ export default function PurchaseHistoryDetail() {
               </div>
               <div className="min-w-0 flex-1">
                 <p className="text-sm font-semibold uppercase tracking-wider text-saffron-600">
-                  Purchase
+                  Sales
                 </p>
                 <h2 className="mt-1 text-2xl font-bold text-gray-900">
-                  Purchase #{purchase.id}
+                  Sale ID : {purchase.id}
                 </h2>
                 <p className="mt-1 text-gray-600">
                   {formatDate(purchase.createdAt)}
@@ -177,6 +264,97 @@ export default function PurchaseHistoryDetail() {
                 </p>
               </div>
             </div>
+          </section>
+
+          <section className="rounded-2xl border border-saffron-50/50 bg-white p-6 shadow-elegant">
+            <div className="mb-5">
+              <h3 className="text-sm font-bold uppercase tracking-wider text-gray-700">
+                Payment and Delivery
+              </h3>
+            </div>
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+              <div className="rounded-xl border border-gray-100 bg-gray-50/80 p-4">
+                <p className="text-xs font-medium uppercase tracking-wide text-gray-500">
+                  Delivery Status
+                </p>
+                <p
+                  className={`mt-2 inline-flex rounded-full px-2.5 py-1 text-xs font-semibold capitalize ring-1 ring-inset ${getDeliveryStatusClassName(purchase.deliverystatus)}`}
+                >
+                  {purchase.deliverystatus || "—"}
+                </p>
+              </div>
+              <div className="rounded-xl border border-gray-100 bg-gray-50/80 p-4">
+                <p className="text-xs font-medium uppercase tracking-wide text-gray-500">
+                  Courier Status
+                </p>
+                <p
+                  className={`mt-2 inline-flex rounded-full px-2.5 py-1 text-xs font-semibold capitalize ring-1 ring-inset ${getCourierStatusClassName(purchase.courierstatus)}`}
+                >
+                  {purchase.courierstatus || "—"}
+                </p>
+              </div>
+              <div className="rounded-xl border border-gray-100 bg-gray-50/80 p-4">
+                <p className="text-xs font-medium uppercase tracking-wide text-gray-500">
+                  Cash Amount
+                </p>
+                <p className="mt-1 font-semibold text-gray-800">
+                  {formatCurrency(Number(purchase.cashamount) || 0)}
+                </p>
+              </div>
+              <div className="rounded-xl border border-gray-100 bg-gray-50/80 p-4">
+                <p className="text-xs font-medium uppercase tracking-wide text-gray-500">
+                  UPI Amount
+                </p>
+                <p className="mt-1 font-semibold text-gray-800">
+                  {formatCurrency(Number(purchase.upiamount) || 0)}
+                </p>
+              </div>
+            </div>
+            {purchase.courierstatus?.toLowerCase() === "directpayment" && (
+              <div className="mt-5 flex flex-col gap-3 sm:flex-row sm:items-end">
+                <div className="flex-1">
+                  <label
+                    htmlFor="purchase-delivery-status"
+                    className="mb-1 block text-sm font-medium text-gray-700"
+                  >
+                    Update Delivery Status
+                  </label>
+                  <select
+                    id="purchase-delivery-status"
+                    value={deliveryStatus}
+                    disabled={
+                      purchase.deliverystatus?.toLowerCase() === "delivered"
+                    }
+                    onChange={(event) => {
+                      const value = event.target.value;
+                      if (
+                        value === "packed" ||
+                        value === "shipped" ||
+                        value === "delivered"
+                      ) {
+                        setDeliveryStatus(value);
+                      }
+                    }}
+                    className="w-full rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm focus:border-saffron-500 focus:outline-none focus:ring-2 focus:ring-saffron-500/50 disabled:cursor-not-allowed disabled:bg-gray-100 disabled:text-gray-500"
+                  >
+                    <option value="packed">Packed</option>
+                    <option value="shipped">Shipped</option>
+                    <option value="delivered">Delivered</option>
+                  </select>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => void handleDeliveryStatusUpdate()}
+                  disabled={
+                    updatingDeliveryStatus ||
+                    purchase.deliverystatus?.toLowerCase() === "delivered"
+                  }
+                  className="rounded-xl bg-saffron-500 px-5 py-2.5 font-semibold text-white shadow-md shadow-saffron-500/20 transition-colors hover:bg-saffron-600 disabled:cursor-not-allowed disabled:opacity-70"
+                >
+                  {updatingDeliveryStatus ? "Updating..." : "Update Status"}
+                </button>
+              </div>
+            )}
           </section>
 
           <section className="rounded-2xl border border-saffron-50/50 bg-white p-6 shadow-elegant">
@@ -196,7 +374,7 @@ export default function PurchaseHistoryDetail() {
                     {purchase.registration?.fullname || "—"}
                   </p>
                   <p className="text-xs text-gray-500">
-                    User ID: #{purchase.registerid}
+                    User ID: {purchase.registerid}
                   </p>
                 </div>
               </div>
@@ -299,7 +477,7 @@ export default function PurchaseHistoryDetail() {
                       colSpan={3}
                       className="px-6 py-4 text-right font-semibold text-gray-700"
                     >
-                      Purchase Total
+                      Sales Total
                     </td>
                     <td className="px-6 py-4 font-bold text-saffron-700">
                       {formatCurrency(purchase.totalamount)}
@@ -312,7 +490,7 @@ export default function PurchaseHistoryDetail() {
         </motion.div>
       ) : (
         <div className="rounded-2xl border border-saffron-50/50 bg-white p-8 text-center text-gray-500 shadow-elegant">
-          Purchase not found.
+          Sale not found.
         </div>
       )}
     </div>

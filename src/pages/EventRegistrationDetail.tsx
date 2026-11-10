@@ -26,6 +26,8 @@ interface RegistrationRecord {
   discountamount?: number | null;
   cashamount?: number | null;
   upiamount?: number | null;
+  sessiontype?: string | null;
+  notes?: string | null;
   paymentstatus: "pending" | "completed" | string;
   createdAt: string;
   updatedAt: string;
@@ -61,8 +63,11 @@ export default function RegistrationDetail() {
   const [loading, setLoading] = useState(true);
   const [updatingStatus, setUpdatingStatus] = useState(false);
   const [updatingAmounts, setUpdatingAmounts] = useState(false);
+  const [updatingSessionDetails, setUpdatingSessionDetails] = useState(false);
   const [discountAmountInput, setDiscountAmountInput] = useState("");
   const [cashAmountInput, setCashAmountInput] = useState("");
+  const [sessionType, setSessionType] = useState("attended");
+  const [notesInput, setNotesInput] = useState("");
   const [showPaymentQr, setShowPaymentQr] = useState(false);
   const [error, setError] = useState("");
   const [statusConfirmation, setStatusConfirmation] = useState("");
@@ -111,7 +116,14 @@ export default function RegistrationDetail() {
           );
         }
         if (active) {
-          setRegistration(response.data.data);
+          const nextRegistration = response.data.data;
+          setRegistration(nextRegistration);
+          setSessionType(
+            nextRegistration.sessiontype && nextRegistration.sessiontype.trim()
+              ? nextRegistration.sessiontype.toLowerCase()
+              : "attended",
+          );
+          setNotesInput(nextRegistration.notes ?? "");
         }
       } catch (requestError) {
         console.error("Failed to fetch registration details", requestError);
@@ -174,6 +186,78 @@ export default function RegistrationDetail() {
     };
   }, [upiPaymentLink]);
 
+  const normalizeSessionType = (value: string) => {
+    const normalized = value.trim().toLowerCase();
+    if (normalized === "postponed" || normalized === "postponded") {
+      return "postponded";
+    }
+    if (normalized === "absent") {
+      return "absent";
+    }
+    return "attended";
+  };
+
+  const updateSessionDetails = async () => {
+    if (!registration) return false;
+
+    const nextSessionType = normalizeSessionType(sessionType);
+    const trimmedNotes = notesInput.trim();
+    setUpdatingSessionDetails(true);
+    setError("");
+    setStatusConfirmation("");
+
+    try {
+      const response = await api.post<ApiResponse<{ message?: string }>>(
+        "/registration-history/update",
+        {
+          id: registration.id,
+          registerid: registration.registerid,
+          eventid: registration.eventid,
+          evenetname: registration.evenetname,
+          registrationfee: registrationFee,
+          advanceamount: Number(registration.advanceamount) || 0,
+          balanceamount: Number(registration.balanceamount) || 0,
+          discountamount: Number(registration.discountamount) || 0,
+          cashamount: Number(registration.cashamount) || 0,
+          upiamount: Number(registration.upiamount) || 0,
+          sessiontype: nextSessionType,
+          notes: trimmedNotes,
+          paymentstatus: registration.paymentstatus,
+        },
+      );
+
+      if (!response.data?.success) {
+        throw new Error(
+          response.data?.message || "Unable to update session details.",
+        );
+      }
+
+      setRegistration((current) =>
+        current
+          ? {
+              ...current,
+              sessiontype: nextSessionType,
+              notes: trimmedNotes,
+            }
+          : current,
+      );
+      setStatusConfirmation(
+        response.data.data?.message || "Session details updated successfully.",
+      );
+      return true;
+    } catch (requestError) {
+      console.error("Failed to update session details", requestError);
+      setError(
+        requestError instanceof Error && requestError.message
+          ? requestError.message
+          : "Unable to update session details. Please try again.",
+      );
+      return false;
+    } finally {
+      setUpdatingSessionDetails(false);
+    }
+  };
+
   const updatePaymentAmounts = async (
     nextDiscountAmount: number,
     nextCashAmount: number,
@@ -212,6 +296,8 @@ export default function RegistrationDetail() {
           discountamount: nextDiscountAmount,
           cashamount: nextCashAmount,
           upiamount: 0,
+          sessiontype: normalizeSessionType(sessionType),
+          notes: notesInput.trim(),
           paymentstatus:
             nextBalance === 0 ? "completed" : registration.paymentstatus,
         },
@@ -230,6 +316,8 @@ export default function RegistrationDetail() {
               cashamount: nextCashAmount,
               upiamount: 0,
               balanceamount: nextBalance,
+              sessiontype: normalizeSessionType(sessionType),
+              notes: notesInput.trim(),
               paymentstatus:
                 nextBalance === 0 ? "completed" : current.paymentstatus,
             }
@@ -258,7 +346,8 @@ export default function RegistrationDetail() {
     event: React.FormEvent<HTMLFormElement>,
   ) => {
     event.preventDefault();
-    const discount = Number(discountAmountInput);
+    const existingDiscount = Number(registration?.discountamount) || 0;
+    const discount = existingDiscount + Number(discountAmountInput || 0);
     const cash =
       cashAmountInput === "" ? Number(registration?.cashamount) || 0 : Number(cashAmountInput);
     if (discount > registrationFee) {
@@ -276,10 +365,11 @@ export default function RegistrationDetail() {
     event: React.FormEvent<HTMLFormElement>,
   ) => {
     event.preventDefault();
+    const existingDiscount = Number(registration?.discountamount) || 0;
     const discount =
       discountAmountInput === ""
-        ? Number(registration?.discountamount) || 0
-        : Number(discountAmountInput);
+        ? existingDiscount
+        : existingDiscount + Number(discountAmountInput || 0);
     const cash = Number(cashAmountInput);
     if (discount + cash + (Number(registration?.advanceamount) || 0) > registrationFee) {
       setError("Discount and received amounts cannot exceed the registration fee.");
@@ -308,10 +398,26 @@ export default function RegistrationDetail() {
       return;
     }
 
+    const existingDiscount = Number(registration.discountamount) || 0;
+    const nextDiscountAmount =
+      discountAmountInput === ""
+        ? existingDiscount
+        : existingDiscount + Number(discountAmountInput || 0);
+    const nextCashAmount =
+      cashAmountInput === ""
+        ? Number(registration.cashamount) || 0
+        : Number(cashAmountInput);
+    const nextBalanceAmount = Math.max(
+      0,
+      registrationFee -
+        nextDiscountAmount -
+        (Number(registration.advanceamount) || 0) -
+        nextCashAmount,
+    );
+
     setUpdatingStatus(true);
     setError("");
     setStatusConfirmation("");
-    const balanceAmount = outstandingBalance;
     try {
       const response = await api.post<ApiResponse<{ message?: string }>>(
         "/registration-history/update",
@@ -323,9 +429,11 @@ export default function RegistrationDetail() {
           registrationfee: registrationFee,
           advanceamount: Number(registration.advanceamount) || 0,
           balanceamount: 0,
-          discountamount: discountAmount,
-          cashamount: cashAmount,
-          upiamount: balanceAmount,
+          discountamount: nextDiscountAmount,
+          cashamount: nextCashAmount,
+          upiamount: nextBalanceAmount,
+          sessiontype: normalizeSessionType(sessionType),
+          notes: notesInput.trim(),
           paymentstatus: "completed",
         },
       );
@@ -341,13 +449,17 @@ export default function RegistrationDetail() {
               ...current,
               advanceamount: Number(registration.advanceamount) || 0,
               balanceamount: 0,
-              discountamount: discountAmount,
-              cashamount: cashAmount,
-              upiamount: balanceAmount,
+              discountamount: nextDiscountAmount,
+              cashamount: nextCashAmount,
+              upiamount: nextBalanceAmount,
+              sessiontype: normalizeSessionType(sessionType),
+              notes: notesInput.trim(),
               paymentstatus: "completed",
             }
           : current,
       );
+      setDiscountAmountInput("");
+      setCashAmountInput("");
       setStatusConfirmation(
         response.data.data?.message || "Payment status updated to completed.",
       );
@@ -649,6 +761,75 @@ export default function RegistrationDetail() {
                     </button>
                   </form>
                 )}
+              </section>
+
+              <section className="rounded-2xl border border-saffron-50/50 bg-white p-6 shadow-elegant sm:p-7">
+                <div className="mb-5">
+                  <h3 className="text-sm font-bold uppercase tracking-wider text-gray-700">
+                    Session Details
+                  </h3>
+                  <p className="mt-1 text-sm text-gray-500">
+                    Update attendance status and notes for this registration.
+                  </p>
+                </div>
+
+                <div className="space-y-5">
+                  <div>
+                    <label className="mb-2 block text-sm font-medium text-gray-700">
+                      Session Type
+                    </label>
+                    <div className="flex flex-wrap gap-3">
+                      {[
+                        { value: "attended", label: "Attended" },
+                        { value: "postponded", label: "Postponded" },
+                        { value: "absent", label: "Absent" },
+                      ].map((option) => (
+                        <label
+                          key={option.value}
+                          className="flex cursor-pointer items-center gap-2 rounded-xl border border-gray-200 bg-gray-50 px-3 py-2 text-sm font-medium text-gray-700 transition-colors hover:border-saffron-200 hover:bg-saffron-50"
+                        >
+                          <input
+                            type="radio"
+                            name="sessionType"
+                            value={option.value}
+                            checked={sessionType === option.value}
+                            onChange={(event) => setSessionType(event.target.value)}
+                            className="h-4 w-4 border-gray-300 text-saffron-500 focus:ring-saffron-500"
+                          />
+                          <span>{option.label}</span>
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div>
+                    <label
+                      htmlFor="registration-notes"
+                      className="mb-1 block text-sm font-medium text-gray-700"
+                    >
+                      Notes
+                    </label>
+                    <textarea
+                      id="registration-notes"
+                      rows={4}
+                      value={notesInput}
+                      onChange={(event) => setNotesInput(event.target.value)}
+                      placeholder="Add any notes for this registration..."
+                      className="w-full rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm transition-shadow focus:border-saffron-500 focus:outline-none focus:ring-2 focus:ring-saffron-500/50"
+                    />
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => void updateSessionDetails()}
+                    disabled={updatingSessionDetails}
+                    className="w-full rounded-xl bg-saffron-500 px-5 py-2.5 font-semibold text-white shadow-md shadow-saffron-500/20 transition-colors hover:bg-saffron-600 disabled:cursor-not-allowed disabled:opacity-70"
+                  >
+                    {updatingSessionDetails
+                      ? "Updating..."
+                      : "Update Session Details"}
+                  </button>
+                </div>
               </section>
 
             </div>

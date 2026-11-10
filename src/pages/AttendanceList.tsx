@@ -342,7 +342,7 @@ export default function AttendanceList() {
                       {staff.username}
                     </p>
                     <p className="mt-1 text-xs text-gray-500">
-                      Staff ID: #{staff.userid}
+                      Staff ID{staff.userid}
                     </p>
                   </div>
 
@@ -427,7 +427,7 @@ export default function AttendanceList() {
                           {record.username || `Staff #${record.userid}`}
                         </p>
                         <p className="mt-0.5 text-xs text-gray-500">
-                          ID: #{record.userid}
+                          ID: {record.userid}
                         </p>
                       </td>
                       <td className="px-6 py-4 text-gray-700">

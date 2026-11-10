@@ -293,7 +293,7 @@ export default function VideoTestimonials() {
                               {item.title}
                             </p>
                             <p className="text-xs text-gray-500 mt-1">
-                              ID: #{item.id}
+                              ID: {item.id}
                             </p>
                           </div>
                         </div>

@@ -46,7 +46,7 @@ const sidebarLinks = [
     icon: UserRoundPlus,
   },
   { name: "Event Registration", path: "/registration", icon: ClipboardList },
-  { name: "Purchase History", path: "/purchase-history", icon: ReceiptText },
+  { name: "Sales History", path: "/purchase-history", icon: ReceiptText },
   { name: "Attendance", path: "/attendance", icon: CalendarCheck2 },
   { name: "Attendance List", path: "/attendance-list", icon: Clock3 },
   { name: "Staff Leaves", path: "/staff-leaves", icon: CalendarDays },
