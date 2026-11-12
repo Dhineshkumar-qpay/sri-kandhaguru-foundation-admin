@@ -5,6 +5,7 @@ import {
   Clock3,
   Download,
   Eye,
+  FileDown,
   IndianRupee,
   Pencil,
   Plus,
@@ -50,15 +51,29 @@ interface RegistrationHistoryRecord {
   registrationfee: number;
   advanceamount: number;
   balanceamount: number;
+  subtotal?: number | string | null;
   discountamount?: number | string | null;
   cashamount?: number | string | null;
   upiamount?: number | string | null;
   paymentstatus: string;
+  sessiontype: string;
+  notes?: string | null;
   createdAt: string;
   updatedAt: string;
   registration?: {
     id: number;
     fullname: string;
+    mobile?: string;
+    address?: string;
+  };
+}
+
+interface RegistrationInvoiceRecord extends RegistrationHistoryRecord {
+  registration?: {
+    id: number;
+    fullname: string;
+    mobile?: string;
+    address?: string;
   };
 }
 
@@ -89,6 +104,37 @@ const getOutstandingBalance = (history: RegistrationHistoryRecord) => {
       (Number(history.advanceamount) || 0) -
       (Number(history.cashamount) || 0),
   );
+};
+
+const getRegistrationSubtotal = (history: RegistrationHistoryRecord) => {
+  if (history.subtotal !== null && history.subtotal !== undefined) {
+    const subtotal = Number(history.subtotal);
+    if (Number.isFinite(subtotal)) return subtotal;
+  }
+  return Math.max(
+    0,
+    (Number(history.registrationfee) || 0) -
+      (Number(history.discountamount) || 0),
+  );
+};
+
+const formatInvoiceDate = (value: string) => {
+  const date = new Date(value);
+  return Number.isNaN(date.getTime())
+    ? "—"
+    : date.toLocaleDateString("en-IN", {
+        day: "numeric",
+        month: "short",
+        year: "numeric",
+      });
+};
+
+const formatInvoiceAmount = (value: number | string | null | undefined) => {
+  const amount = Number(value);
+  return `Rs. ${(Number.isFinite(amount) ? amount : 0).toLocaleString("en-IN", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  })}`;
 };
 
 const emptyForm: HistoryForm = {
@@ -161,6 +207,9 @@ export default function EventRegistration() {
   const [searchingUsers, setSearchingUsers] = useState(false);
   const [saving, setSaving] = useState(false);
   const [deletingId, setDeletingId] = useState<number | null>(null);
+  const [downloadingInvoiceId, setDownloadingInvoiceId] = useState<
+    number | null
+  >(null);
   const [error, setError] = useState("");
   const [eventsError, setEventsError] = useState("");
   const pageSize = 10;
@@ -377,7 +426,10 @@ export default function EventRegistration() {
     : 0;
   const advanceAmount = Number(form.advanceamount) || 0;
   const discountAmount = Number(form.discountamount) || 0;
-  const balanceAmount = Math.max(0, registrationFee - discountAmount - advanceAmount);
+  const balanceAmount = Math.max(
+    0,
+    registrationFee - discountAmount - advanceAmount,
+  );
 
   const filteredHistories = histories.filter((history) =>
     [
@@ -391,14 +443,7 @@ export default function EventRegistration() {
     ),
   );
   const totalRegistrationAmount = filteredHistories.reduce(
-    (total, history) =>
-      total +
-      Math.max(
-        0,
-        (Number(history.advanceamount) || 0) +
-          (Number(history.cashamount) || 0) +
-          (Number(history.upiamount) || 0),
-      ),
+    (total, history) => total + getRegistrationSubtotal(history),
     0,
   );
   const totalPages = Math.max(
@@ -419,14 +464,244 @@ export default function EventRegistration() {
           history.registration?.fullname || `User #${history.registerid}`,
         "Event Name": history.evenetname,
         "Payment Status": history.paymentstatus || "pending",
+        "Session Type": history.sessiontype || "absent",
+        Notes: history.notes || "",
         "Registration Fee": Number(history.registrationfee) || 0,
         Discount: Number(history.discountamount) || 0,
         Advance: Number(history.advanceamount) || 0,
         "Cash Received": Number(history.cashamount) || 0,
         "UPI Amount": Number(history.upiamount) || 0,
         Balance: getOutstandingBalance(history),
+        Subtotal: getRegistrationSubtotal(history),
       })),
     );
+  };
+
+  const handleDownloadInvoice = async (history: RegistrationHistoryRecord) => {
+    setDownloadingInvoiceId(history.id);
+    setError("");
+    try {
+      const { jsPDF } = await import("jspdf");
+      const response = await api.post<ApiResponse<RegistrationInvoiceRecord>>(
+        "/registration-history/details",
+        { id: history.id },
+      );
+      if (!response.data?.success || !response.data.data) {
+        throw new Error(
+          getApiMessage(
+            response.data,
+            "Unable to load registration invoice details.",
+          ),
+        );
+      }
+
+      const invoice = response.data.data;
+      const logoResponse = await fetch("/appLogo.png");
+      if (!logoResponse.ok) {
+        throw new Error("Unable to load the application logo.");
+      }
+      const logoBlob = await logoResponse.blob();
+      const logoData = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => {
+          if (typeof reader.result === "string") {
+            resolve(reader.result);
+          } else {
+            reject(new Error("Unable to read the application logo."));
+          }
+        };
+        reader.onerror = () =>
+          reject(new Error("Unable to read the application logo."));
+        reader.readAsDataURL(logoBlob);
+      });
+      const doc = new jsPDF();
+      const pageWidth = doc.internal.pageSize.getWidth();
+      const margin = 16;
+      const brand = [199, 83, 2] as const;
+      const lightGray = [224, 230, 236] as const;
+
+      doc.addImage(logoData, "PNG", pageWidth - margin - 30, 12, 30, 30);
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(24);
+      doc.setTextColor(...brand);
+      doc.text("INVOICE", margin, 29);
+      doc.setFontSize(9);
+      doc.setTextColor(45, 54, 64);
+      doc.text("Sri Kandhaguru Foundation", pageWidth - margin - 34, 48, {
+        align: "right",
+      });
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(8);
+      doc.setTextColor(105, 113, 122);
+      doc.text("Event Registration", pageWidth - margin - 34, 53, {
+        align: "right",
+      });
+      doc.setDrawColor(...lightGray);
+      doc.line(margin, 59, pageWidth - margin, 59);
+
+      let customerY = 72;
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(9);
+      doc.setTextColor(...brand);
+      doc.text("INVOICE TO", margin, customerY);
+      customerY += 8;
+      doc.setFontSize(11);
+      doc.setTextColor(35, 40, 45);
+      const customerName =
+        invoice.registration?.fullname || `User ID : ${invoice.registerid}`;
+      const nameLines = doc.splitTextToSize(customerName, 82);
+      doc.text(nameLines, margin, customerY);
+      customerY += nameLines.length * 5 + 2;
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(9);
+      doc.setTextColor(68, 74, 81);
+      doc.text(
+        `Mobile: ${invoice.registration?.mobile || "—"}`,
+        margin,
+        customerY,
+      );
+      customerY += 6;
+      const addressLines = doc.splitTextToSize(
+        `Address: ${invoice.registration?.address || "—"}`,
+        86,
+      );
+      doc.text(addressLines, margin, customerY);
+
+      const detailsX = 129;
+      const detailValueX = pageWidth - margin;
+      doc.setFont("helvetica", "bold");
+      doc.setTextColor(45, 52, 60);
+      doc.text("Invoice ID ", detailsX, 75);
+      doc.text("Registration Date", detailsX, 84);
+      doc.setFont("helvetica", "normal");
+      doc.text(String(invoice.id), detailValueX, 75, { align: "right" });
+      doc.text(formatInvoiceDate(invoice.createdAt), detailValueX, 84, {
+        align: "right",
+      });
+
+      const tableY = Math.max(customerY + addressLines.length * 5 + 5, 101);
+      const headerHeight = 11;
+      const eventLines = doc.splitTextToSize(
+        invoice.evenetname || `Event #${invoice.eventid}`,
+        88,
+      );
+      const rowHeight = Math.max(15, eventLines.length * 5 + 8);
+      doc.setFillColor(...brand);
+      doc.rect(margin, tableY, pageWidth - margin * 2, headerHeight, "F");
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(8);
+      doc.setTextColor(255, 255, 255);
+      const feeX = 143;
+      const quantityX = 160;
+      const totalX = pageWidth - margin - 4;
+      doc.text("S.No", margin + 4, tableY + 7);
+      doc.text("Item Description", margin + 17, tableY + 7);
+      doc.text("Fee", feeX, tableY + 7, { align: "right" });
+      doc.text("Qty", quantityX, tableY + 7, { align: "right" });
+      doc.text("Total", totalX, tableY + 7, { align: "right" });
+
+      const rowY = tableY + headerHeight;
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(8);
+      doc.setTextColor(45, 50, 56);
+      const textY =
+        rowY + Math.max(7, (rowHeight - eventLines.length * 5) / 2 + 3);
+      doc.text("1", margin + 5, textY);
+      doc.text(eventLines, margin + 17, textY);
+      doc.text(formatInvoiceAmount(invoice.registrationfee), feeX, textY, {
+        align: "right",
+      });
+      doc.text("1", quantityX, textY, { align: "right" });
+      doc.text(formatInvoiceAmount(invoice.registrationfee), totalX, textY, {
+        align: "right",
+      });
+      doc.setDrawColor(...lightGray);
+      doc.line(margin, rowY + rowHeight, pageWidth - margin, rowY + rowHeight);
+
+      const summaryY = rowY + rowHeight + 15;
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(9);
+      doc.setTextColor(...brand);
+      doc.text("PAYMENT INFO", margin, summaryY);
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(8);
+      doc.setTextColor(68, 74, 81);
+      const paymentStatus = invoice.paymentstatus || "Pending";
+      doc.text(
+        `Status: ${paymentStatus.charAt(0).toUpperCase()}${paymentStatus.slice(1)}`,
+        margin,
+        summaryY + 8,
+      );
+
+      const summaryBoxX = pageWidth - margin - 78;
+      const summaryX = summaryBoxX + 4;
+      const summaryValueX = pageWidth - margin - 4;
+      let summaryRowY = summaryY;
+      const summaryRows: [string, string][] = [
+        ["Registration Fee", formatInvoiceAmount(invoice.registrationfee)],
+        ["Discount", formatInvoiceAmount(invoice.discountamount)],
+        ["Advance", formatInvoiceAmount(invoice.advanceamount)],
+        ["Cash Received", formatInvoiceAmount(invoice.cashamount)],
+        ["UPI Received", formatInvoiceAmount(invoice.upiamount)],
+      ];
+      doc.setFontSize(8);
+      for (const [label, value] of summaryRows) {
+        doc.setFont("helvetica", "normal");
+        doc.setTextColor(55, 61, 68);
+        doc.text(label, summaryX, summaryRowY);
+        doc.text(value, summaryValueX, summaryRowY, { align: "right" });
+        summaryRowY += 7;
+      }
+      doc.setFillColor(...brand);
+      doc.rect(summaryBoxX, summaryRowY - 4, 78, 10, "F");
+      doc.setFont("helvetica", "bold");
+      doc.setTextColor(255, 255, 255);
+      doc.text("Sub Total", summaryX, summaryRowY + 2);
+      doc.text(
+        formatInvoiceAmount(invoice.subtotal || 0),
+        summaryValueX,
+        summaryRowY + 2,
+        { align: "right" },
+      );
+
+      const footerY = Math.max(summaryRowY + 32, summaryY + 45);
+      doc.setDrawColor(...lightGray);
+      doc.line(margin, footerY, pageWidth - margin, footerY);
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(8);
+      doc.setTextColor(105, 113, 122);
+      doc.text(
+        "Thank you for registering with Sri Kandhaguru Foundation.",
+        margin,
+        footerY + 8,
+      );
+      doc.setDrawColor(105, 113, 122);
+      doc.line(
+        pageWidth - margin - 42,
+        footerY + 4,
+        pageWidth - margin,
+        footerY + 4,
+      );
+      doc.setFontSize(7);
+      doc.text("Authorized Signature", pageWidth - margin - 21, footerY + 9, {
+        align: "center",
+      });
+
+      doc.save(`event-registration-invoice-${invoice.id}.pdf`);
+    } catch (requestError) {
+      console.error(
+        "Failed to download event registration invoice",
+        requestError,
+      );
+      setError(
+        getRequestErrorMessage(
+          requestError,
+          "Unable to download invoice. Please try again.",
+        ),
+      );
+    } finally {
+      setDownloadingInvoiceId(null);
+    }
   };
 
   const resetForm = () => {
@@ -904,7 +1179,7 @@ export default function EventRegistration() {
               <div className="relative flex items-center justify-between gap-4">
                 <div className="min-w-0">
                   <p className="text-xs font-semibold uppercase tracking-wider text-gray-500">
-                    Net Registration Amount
+                    Registration Subtotal
                   </p>
                   <p className="mt-2 truncate text-2xl font-bold tracking-tight text-green-800 sm:text-3xl">
                     {formatCurrency(totalRegistrationAmount)}
@@ -1004,23 +1279,25 @@ export default function EventRegistration() {
                     <th className="px-6 py-4 font-medium">S.No</th>
                     <th className="px-6 py-4 font-medium">Actions</th>
                     <th className="px-6 py-4 font-medium">User</th>
-                    <th className="w-[300px] px-6 py-4 font-medium">
+                    <th className="w-[200px] min-w-[200px] px-6 py-4 font-medium">
                       Event Name
                     </th>
                     <th className="px-6 py-4 font-medium">Payment Status</th>
+                    <th className="px-6 py-4 font-medium">Session Type</th>
                     <th className="px-6 py-4 font-medium">Registration Fee</th>
                     <th className="px-6 py-4 font-medium">Discount</th>
                     <th className="px-6 py-4 font-medium">Advance</th>
                     <th className="px-6 py-4 font-medium">Cash Received</th>
                     <th className="px-6 py-4 font-medium">UPI Amount</th>
                     <th className="px-6 py-4 font-medium">Balance</th>
+                    <th className="px-6 py-4 font-medium">SubTotal</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100">
                   {currentHistories.length === 0 && !loadingHistories ? (
                     <tr>
                       <td
-                        colSpan={11}
+                        colSpan={13}
                         className="px-6 py-8 text-center text-gray-500"
                       >
                         No event registrations found for this month.
@@ -1047,6 +1324,18 @@ export default function EventRegistration() {
                               aria-label={`View event registration ${history.id}`}
                             >
                               <Eye className="w-4 h-4" />
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() =>
+                                void handleDownloadInvoice(history)
+                              }
+                              disabled={downloadingInvoiceId === history.id}
+                              className="p-2 text-green-600 hover:bg-green-50 rounded-lg cursor-pointer disabled:cursor-not-allowed disabled:opacity-50"
+                              title="Download registration invoice PDF"
+                              aria-label={`Download invoice for registration ${history.id}`}
+                            >
+                              <FileDown className="w-4 h-4" />
                             </button>
                             {isAdmin && (
                               <>
@@ -1080,7 +1369,7 @@ export default function EventRegistration() {
                             REGISTER ID:{history.registerid}
                           </span>
                         </td>
-                        <td className="w-[300px] px-6 py-4 text-sm font-medium text-gray-800">
+                        <td className="w-[200px] min-w-[200px] px-6 py-4 text-sm font-medium text-gray-800">
                           <span
                             className="line-clamp-2"
                             title={history.evenetname || "—"}
@@ -1107,6 +1396,26 @@ export default function EventRegistration() {
                           </span>
                         </td>
                         <td className="px-6 py-4">
+                          <span
+                            className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold capitalize border ${
+                              history.sessiontype?.toLowerCase() === "attended"
+                                ? "bg-green-100 text-green-700 border-green-200"
+                                : history.sessiontype?.toLowerCase() ===
+                                    "postponded"
+                                  ? "bg-pink-100 text-pink-700 border-pink-200"
+                                  : "bg-yellow-100 text-yellow-700 border-yellow-200"
+                            }`}
+                          >
+                            {history.sessiontype?.toLowerCase() ===
+                            "completed" ? (
+                              <BadgeCheck className="w-3.5 h-3.5" />
+                            ) : (
+                              <Clock3 className="w-3.5 h-3.5" />
+                            )}
+                            {history.sessiontype || "absent"}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4">
                           {formatCurrency(history.registrationfee)}
                         </td>
                         <td className="px-6 py-4">
@@ -1123,6 +1432,9 @@ export default function EventRegistration() {
                         </td>
                         <td className="px-6 py-4">
                           {formatCurrency(getOutstandingBalance(history))}
+                        </td>
+                        <td className="px-6 py-4">
+                          {formatCurrency(getRegistrationSubtotal(history))}
                         </td>
                       </tr>
                     ))

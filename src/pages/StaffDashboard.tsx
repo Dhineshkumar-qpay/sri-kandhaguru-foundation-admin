@@ -53,7 +53,7 @@ const cards = [
   },
   {
     key: "totalpurchasehistoryvalue",
-    title: "Purchase Value",
+    title: "Sales Value",
     icon: IndianRupee,
     color: "bg-green-500",
     format: "currency",

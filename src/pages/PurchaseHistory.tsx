@@ -71,6 +71,11 @@ interface ApiResponse<T> {
   message?: string;
 }
 
+const purchaseUpiOptions = [
+  { label: "HDFC", value: "9345405549@ybl" },
+  { label: "SBI", value: "9842023346@SBI" },
+] as const;
+
 const fieldClassName =
   "w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-saffron-500/50 focus:border-saffron-500 transition-all";
 
@@ -130,6 +135,9 @@ export default function PurchaseHistory() {
     "courier" | "directpayment"
   >("courier");
   const [cashAmount, setCashAmount] = useState("");
+  const [selectedUpiId, setSelectedUpiId] = useState<string>(
+    purchaseUpiOptions[0].value,
+  );
   const [userSearch, setUserSearch] = useState("");
   const [selectedUser, setSelectedUser] = useState<RegisteredUser | null>(null);
   const [userResults, setUserResults] = useState<RegisteredUser[]>([]);
@@ -372,7 +380,7 @@ export default function PurchaseHistory() {
         : totalAmount;
     if (qrAmount <= 0) return "";
     const params = new URLSearchParams({
-      pa: "9345405549@ybl",
+      pa: selectedUpiId,
       pn: "Sri Kandhaguru Foundation",
       am: qrAmount.toFixed(2),
       cu: "INR",
@@ -388,6 +396,7 @@ export default function PurchaseHistory() {
     balanceAmount,
     totalAmount,
     selectedUser,
+    selectedUpiId,
   ]);
 
   useEffect(() => {
@@ -398,6 +407,7 @@ export default function PurchaseHistory() {
       return;
     }
 
+    setPurchaseQrCode("");
     QRCode.toDataURL(purchasePaymentLink, {
       errorCorrectionLevel: "M",
       margin: 2,
@@ -468,6 +478,7 @@ export default function PurchaseHistory() {
     setPurchaseItems([{ productid: "", quantity: "1" }]);
     setCourierStatus("courier");
     setCashAmount("");
+    setSelectedUpiId(purchaseUpiOptions[0].value);
     setUserSearch("");
     setSelectedUser(null);
     setUserResults([]);
@@ -1132,6 +1143,28 @@ export default function PurchaseHistory() {
                       <p className="mt-2 text-sm text-gray-500">
                         Scan to pay the remaining balance using a UPI app.
                       </p>
+                      <div className="mt-4 w-full max-w-sm text-left">
+                        <label
+                          htmlFor="purchase-upi-id"
+                          className="mb-1 block text-sm font-medium text-gray-700"
+                        >
+                          UPI Account
+                        </label>
+                        <select
+                          id="purchase-upi-id"
+                          value={selectedUpiId}
+                          onChange={(event) =>
+                            setSelectedUpiId(event.target.value)
+                          }
+                          className="w-full rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm focus:border-saffron-500 focus:outline-none focus:ring-2 focus:ring-saffron-500/50"
+                        >
+                          {purchaseUpiOptions.map((option) => (
+                            <option key={option.value} value={option.value}>
+                              {option.label} — {option.value}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
                       {purchaseQrCode ? (
                         <div className="mt-4 rounded-2xl border border-gray-100 bg-white p-3 shadow-sm">
                           <img
@@ -1155,7 +1188,7 @@ export default function PurchaseHistory() {
                       <p className="mt-3 text-xs text-gray-500">
                         UPI ID:{" "}
                         <span className="font-semibold text-gray-700">
-                          9345405549@ybl
+                          {selectedUpiId}
                         </span>
                       </p>
                     </>
@@ -1176,6 +1209,26 @@ export default function PurchaseHistory() {
                   maximumFractionDigits: 2,
                 })}`} using GPay, PhonePe, or another UPI app.
               </p>
+              <div className="mt-4 w-full max-w-sm text-left">
+                <label
+                  htmlFor="purchase-edit-upi-id"
+                  className="mb-1 block text-sm font-medium text-gray-700"
+                >
+                  UPI Account
+                </label>
+                <select
+                  id="purchase-edit-upi-id"
+                  value={selectedUpiId}
+                  onChange={(event) => setSelectedUpiId(event.target.value)}
+                  className="w-full rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm focus:border-saffron-500 focus:outline-none focus:ring-2 focus:ring-saffron-500/50"
+                >
+                  {purchaseUpiOptions.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label} — {option.value}
+                    </option>
+                  ))}
+                </select>
+              </div>
               {purchaseQrCode ? (
                 <div className="mt-4 rounded-2xl border border-gray-100 bg-white p-3 shadow-sm">
                   <img
@@ -1199,7 +1252,7 @@ export default function PurchaseHistory() {
               <p className="mt-3 text-xs text-gray-500">
                 UPI ID:{" "}
                 <span className="font-semibold text-gray-700">
-                  9345405549@ybl
+                  {selectedUpiId}
                 </span>
               </p>
               <p className="mt-1 text-xs text-gray-400">
@@ -1238,13 +1291,13 @@ export default function PurchaseHistory() {
             <div className="relative flex items-center justify-between gap-4">
               <div>
                 <p className="text-xs font-semibold uppercase tracking-wider text-gray-500">
-                  Purchase Count
+                  Sales Count
                 </p>
                 <p className="mt-2 text-3xl font-bold tracking-tight text-gray-900">
                   {filteredPurchases.length.toLocaleString("en-IN")}
                 </p>
                 <p className="mt-1 text-xs text-gray-500">
-                  Matching purchases
+                  Matching sales
                 </p>
               </div>
               <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-saffron-100 text-saffron-700 ring-1 ring-saffron-200/70">
@@ -1257,13 +1310,13 @@ export default function PurchaseHistory() {
             <div className="relative flex items-center justify-between gap-4">
               <div className="min-w-0">
                 <p className="text-xs font-semibold uppercase tracking-wider text-gray-500">
-                  Total Purchase Amount
+                  Total Sales Amount
                 </p>
                 <p className="mt-2 truncate text-2xl font-bold tracking-tight text-green-800 sm:text-3xl">
                   {formatCurrency(totalPurchaseAmount)}
                 </p>
                 <p className="mt-1 text-xs text-gray-500">
-                  Total for matching purchases
+                  Total for matching sales
                 </p>
               </div>
               <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-green-100 text-green-700 ring-1 ring-green-200/70">

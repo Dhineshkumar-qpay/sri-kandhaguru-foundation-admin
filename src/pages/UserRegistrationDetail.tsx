@@ -402,7 +402,7 @@ export default function UserRegistrationDetail() {
               <p className="mt-4 text-2xl font-bold text-purple-700">
                 {formatCurrency(totalPurchaseAmount)}
               </p>
-              <p className="mt-1 text-sm text-gray-500">Total purchase value</p>
+              <p className="mt-1 text-sm text-gray-500">Total Sales value</p>
               <p className="mt-3 border-t border-gray-100 pt-3 text-xs text-gray-500">
                 Latest:{" "}
                 <span className="font-semibold text-gray-700">

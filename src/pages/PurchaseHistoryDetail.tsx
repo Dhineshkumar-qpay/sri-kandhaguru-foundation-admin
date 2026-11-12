@@ -310,7 +310,7 @@ export default function PurchaseHistoryDetail() {
                 </p>
               </div>
             </div>
-            {purchase.courierstatus?.toLowerCase() === "directpayment" && (
+            {purchase.courierstatus?.toLowerCase() !== "directpayment" && (
               <div className="mt-5 flex flex-col gap-3 sm:flex-row sm:items-end">
                 <div className="flex-1">
                   <label

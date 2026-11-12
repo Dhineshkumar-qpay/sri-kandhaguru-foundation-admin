@@ -47,6 +47,11 @@ interface ApiResponse<T> {
   message?: string;
 }
 
+const registrationUpiOptions = [
+  { label: "HDFC", value: "9842023346-2@ibl" },
+  { label: "SBI", value: "9842023346@SBI" },
+] as const;
+
 const formatCurrency = (value: number) =>
   `₹${Number(value || 0).toLocaleString("en-IN", {
     minimumFractionDigits: 2,
@@ -60,6 +65,9 @@ export default function RegistrationDetail() {
     null,
   );
   const [qrCode, setQrCode] = useState("");
+  const [selectedUpiId, setSelectedUpiId] = useState<string>(
+    registrationUpiOptions[0].value,
+  );
   const [loading, setLoading] = useState(true);
   const [updatingStatus, setUpdatingStatus] = useState(false);
   const [updatingAmounts, setUpdatingAmounts] = useState(false);
@@ -151,14 +159,14 @@ export default function RegistrationDetail() {
       return "";
     }
     const params = new URLSearchParams({
-      pa: "9842023346-2@ibl",
+      pa: selectedUpiId,
       pn: "Sri Kandhaguru Foundation",
       am: outstandingBalance.toFixed(2),
       cu: "INR",
       tn: `Event registration ${registration.id} - ${registration.registration.fullname}`,
     });
     return `upi://pay?${params.toString()}`;
-  }, [registration, showPaymentQr, outstandingBalance]);
+  }, [registration, showPaymentQr, outstandingBalance, selectedUpiId]);
 
   useEffect(() => {
     let active = true;
@@ -167,6 +175,7 @@ export default function RegistrationDetail() {
       return;
     }
 
+    setQrCode("");
     QRCode.toDataURL(upiPaymentLink, {
       errorCorrectionLevel: "M",
       margin: 2,
@@ -783,6 +792,7 @@ export default function RegistrationDetail() {
                         { value: "attended", label: "Attended" },
                         { value: "postponded", label: "Postponded" },
                         { value: "absent", label: "Absent" },
+                        { value: "upcoming", label: "Upcoming" },
                       ].map((option) => (
                         <label
                           key={option.value}
@@ -914,6 +924,28 @@ export default function RegistrationDetail() {
                       <p className="mt-1 text-xs text-gray-500">
                         Outstanding registration balance
                       </p>
+                      <div className="mt-4 w-full text-left">
+                        <label
+                          htmlFor="registration-upi-id"
+                          className="mb-1 block text-sm font-medium text-gray-700"
+                        >
+                          UPI Account
+                        </label>
+                        <select
+                          id="registration-upi-id"
+                          value={selectedUpiId}
+                          onChange={(event) =>
+                            setSelectedUpiId(event.target.value)
+                          }
+                          className="w-full rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm focus:border-saffron-500 focus:outline-none focus:ring-2 focus:ring-saffron-500/50"
+                        >
+                          {registrationUpiOptions.map((option) => (
+                            <option key={option.value} value={option.value}>
+                              {option.label} — {option.value}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
                       {qrCode ? (
                         <div className="mt-5 rounded-2xl border border-gray-100 bg-white p-3 shadow-lg shadow-gray-200/50">
                           <img
@@ -930,7 +962,7 @@ export default function RegistrationDetail() {
                       <p className="mt-4 text-xs text-gray-500">
                         UPI ID:{" "}
                         <span className="font-semibold text-gray-700">
-                          9842023346-2@ibl
+                          {selectedUpiId}
                         </span>
                       </p>
                       <p className="mt-2 text-xs text-gray-400">
