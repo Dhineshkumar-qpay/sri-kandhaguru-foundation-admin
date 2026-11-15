@@ -22,6 +22,7 @@ import Donations from './pages/Donations';
 import Registration from './pages/EventRegistration';
 import PurchaseHistory from './pages/PurchaseHistory';
 import PurchaseHistoryDetail from './pages/PurchaseHistoryDetail';
+import OfflineProducts from './pages/OfflineProducts';
 import RegistrationDetail from './pages/EventRegistrationDetail';
 import UserRegistration from './pages/UserRegistration';
 import UserRegistrationDetail from './pages/UserRegistrationDetail';
@@ -46,6 +47,7 @@ function App() {
           <Route path="dashboard" element={<DashboardPage />} />
           <Route path="purchase-history" element={<PurchaseHistory />} />
           <Route path="purchase-history/:id" element={<PurchaseHistoryDetail />} />
+          <Route path="offline-products" element={<OfflineProducts />} />
           <Route path="registration" element={<Registration />} />
           <Route path="registration/:id" element={<RegistrationDetail />} />
           <Route path="user-registration" element={<UserRegistration />} />

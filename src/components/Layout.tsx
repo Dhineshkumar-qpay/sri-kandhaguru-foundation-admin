@@ -28,6 +28,7 @@ import {
   CalendarDays,
   ClipboardCheck,
   Clock3,
+  Package,
 } from "lucide-react";
 import { clsx } from "clsx";
 import { motion, AnimatePresence } from "framer-motion";
@@ -47,6 +48,7 @@ const sidebarLinks = [
   },
   { name: "Event Registration", path: "/registration", icon: ClipboardList },
   { name: "Sales History", path: "/purchase-history", icon: ReceiptText },
+  { name: "Offline Products", path: "/offline-products", icon: Package },
   { name: "Attendance", path: "/attendance", icon: CalendarCheck2 },
   { name: "Attendance List", path: "/attendance-list", icon: Clock3 },
   { name: "Staff Leaves", path: "/staff-leaves", icon: CalendarDays },
@@ -84,6 +86,7 @@ export default function Layout() {
     "/staff-leaves",
   ]);
   const visibleSidebarLinks = sidebarLinks.filter((link) => {
+    if (link.path === "/offline-products" && !isAdmin) return false;
     if (link.path === "/leaves" && !isAdmin) return false;
     if (link.path === "/attendance-list" && !isAdmin) return false;
     if (link.path === "/attendance" && isAdmin) return false;

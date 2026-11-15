@@ -1332,7 +1332,7 @@ export default function PurchaseHistory() {
               <Search className="w-5 h-5 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
               <input
                 type="text"
-                placeholder="Search purchases..."
+                placeholder="Search sales..."
                 value={searchTerm}
                 onChange={(event) => {
                   setSearchTerm(event.target.value);

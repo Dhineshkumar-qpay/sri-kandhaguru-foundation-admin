@@ -203,6 +203,9 @@ export default function RegistrationDetail() {
     if (normalized === "absent") {
       return "absent";
     }
+    if (normalized === "upcoming") {
+      return "upcoming";
+    }
     return "attended";
   };
 
