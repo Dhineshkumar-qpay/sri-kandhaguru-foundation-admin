@@ -298,15 +298,24 @@ export default function UserRegistration() {
     setSaving(true);
     setError("");
 
+    const optionalFields = {
+      ...(form.email.trim() ? { email: form.email.trim() } : {}),
+      ...(form.pannumber.trim()
+        ? { pannumber: form.pannumber.trim().toUpperCase() }
+        : {}),
+      ...(form.aadhaarnumber.trim()
+        ? { aadhaarnumber: form.aadhaarnumber.trim() }
+        : {}),
+      ...(form.occupation.trim()
+        ? { occupation: form.occupation.trim() }
+        : {}),
+    };
     const payload = {
       ...(editingId === null ? {} : { id: editingId }),
       fullname: form.fullname.trim(),
       mobile: form.mobile.trim(),
-      email: form.email.trim(),
       address: form.address.trim(),
-      pannumber: form.pannumber.trim(),
-      aadhaarnumber: form.aadhaarnumber.trim(),
-      occupation: form.occupation.trim(),
+      ...optionalFields,
     };
 
     try {

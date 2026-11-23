@@ -8,6 +8,9 @@ import {
   X,
   MapPin,
   Users,
+  Edit2,
+  Trash2,
+  ArrowLeft,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import api from "../services/api";
@@ -45,6 +48,11 @@ interface Booking {
   eventtodate?: string;
   programtype?: string;
   leveltype?: string;
+  pricetype?: "platinum" | "gold" | "silver" | string | null;
+  platinumprice?: number | string | null;
+  goldprice?: number | string | null;
+  silverprice?: number | string | null;
+  lastofferdate?: string | null;
   address: string;
   registrationfee: number;
   createdAt: string;
@@ -71,6 +79,136 @@ export default function Bookings() {
   const [pendingBookingStatus, setPendingBookingStatus] = useState<
     Record<number, string>
   >({});
+
+  // Edit modal state
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [editingBooking, setEditingBooking] = useState<Booking | null>(null);
+  const [editForm, setEditForm] = useState({
+    fullname: "",
+    email: "",
+    phone: "",
+    whatsapp: "",
+    occupation: "",
+    gender: "Male",
+    age: 0,
+    city: "",
+    state: "",
+    country: "",
+    adultcount: 1,
+    childrencount: 0,
+    participants: 1,
+    totalamount: "0",
+    bookingdate: "",
+    bookingtime: "",
+    remarks: "",
+    paymentstatus: "pending",
+    bookingstatus: "pending",
+    transactionid: "",
+    pricetype: "platinum",
+  });
+  const [savingEdit, setSavingEdit] = useState(false);
+  const [deletingId, setDeletingId] = useState<number | null>(null);
+
+  const handleOpenEditModal = (booking: Booking) => {
+    setIsSidebarOpen(false);
+    setEditingBooking(booking);
+    setEditForm({
+      fullname: booking.fullname || "",
+      email: booking.email || "",
+      phone: booking.phone || "",
+      whatsapp: booking.whatsapp || "",
+      occupation: booking.occupation || "",
+      gender: booking.gender || "Male",
+      age: booking.age || 0,
+      city: booking.city || "",
+      state: booking.state || "",
+      country: booking.country || "India",
+      adultcount: booking.adultcount || 1,
+      childrencount: booking.childrencount || 0,
+      participants: booking.participants || 1,
+      totalamount: booking.totalamount || "0",
+      bookingdate: booking.bookingdate || "",
+      bookingtime: booking.bookingtime || "",
+      remarks: booking.remarks || "",
+      paymentstatus: booking.paymentstatus || "pending",
+      bookingstatus: booking.bookingstatus || "pending",
+      transactionid: booking.transactionid || "",
+      pricetype: (booking.pricetype as string) || "platinum",
+    });
+    setIsEditModalOpen(true);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
+  const handleSaveEdit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingBooking) return;
+
+    setSavingEdit(true);
+    try {
+      const response = await api.post("/booking/edit", {
+        id: editingBooking.id,
+        ...editForm,
+      });
+
+      if (response.data?.success) {
+        const updated = response.data.data?.booking || {
+          ...editingBooking,
+          ...editForm,
+        };
+
+        setOnlineBookings((prev) =>
+          prev.map((b) => (b.id === editingBooking.id ? { ...b, ...updated } : b)),
+        );
+        setOfflineBookings((prev) =>
+          prev.map((b) => (b.id === editingBooking.id ? { ...b, ...updated } : b)),
+        );
+
+        if (selectedBooking?.id === editingBooking.id) {
+          setSelectedBooking((prev) => (prev ? { ...prev, ...updated } : null));
+        }
+
+        setIsEditModalOpen(false);
+        setEditingBooking(null);
+        alert("Booking updated successfully!");
+      } else {
+        alert(response.data?.data || "Failed to update booking.");
+      }
+    } catch (error) {
+      console.error("Failed to update booking:", error);
+      alert("Failed to update booking. Please try again.");
+    } finally {
+      setSavingEdit(false);
+    }
+  };
+
+  const handleDeleteBooking = async (id: number) => {
+    if (!window.confirm("Are you sure you want to delete this booking? This action cannot be undone.")) {
+      return;
+    }
+
+    setDeletingId(id);
+    try {
+      const response = await api.post("/booking/delete", { id });
+      if (response.data?.success) {
+        setOnlineBookings((prev) => prev.filter((b) => b.id !== id));
+        setOfflineBookings((prev) => prev.filter((b) => b.id !== id));
+
+        if (selectedBooking?.id === id) {
+          setIsSidebarOpen(false);
+          setSelectedBooking(null);
+        }
+
+        alert("Booking deleted successfully!");
+      } else {
+        alert(response.data?.data || "Failed to delete booking.");
+      }
+    } catch (error) {
+      console.error("Failed to delete booking:", error);
+      alert("Failed to delete booking. Please try again.");
+    } finally {
+      setDeletingId(null);
+    }
+  };
 
   useEffect(() => {
     if (selectedBooking) {
@@ -374,10 +512,10 @@ export default function Bookings() {
       <div className="overflow-x-auto relative min-h-[300px]">
         {((title === "Online" && loadingOnline) ||
           (title === "Offline" && loadingOffline)) && (
-          <div className="absolute inset-0 bg-white/60 backdrop-blur-sm z-10 flex items-center justify-center">
-            <div className="w-8 h-8 border-4 border-saffron-500 border-t-transparent rounded-full animate-spin"></div>
-          </div>
-        )}
+            <div className="absolute inset-0 bg-white/60 backdrop-blur-sm z-10 flex items-center justify-center">
+              <div className="w-8 h-8 border-4 border-saffron-500 border-t-transparent rounded-full animate-spin"></div>
+            </div>
+          )}
         <table className="w-full text-left border-collapse min-w-[1000px]">
           <thead>
             <tr className="bg-gray-50/50 border-b border-gray-100 text-gray-500 text-sm">
@@ -388,7 +526,6 @@ export default function Bookings() {
               <th className="px-6 py-4 font-medium">Eventname</th>
               <th className="px-6 py-4 font-medium">Count</th>
               <th className="px-6 py-4 font-medium">Amount</th>
-              <th className="px-6 py-4 font-medium text-center">Screenshot</th>
               <th className="px-6 py-4 font-medium">
                 {title === "Online" ? "Booking Date" : "Date"}
               </th>
@@ -396,10 +533,10 @@ export default function Bookings() {
           </thead>
           <tbody className="divide-y divide-gray-100">
             {paginatedData.length === 0 &&
-            !(
-              (title === "Online" && loadingOnline) ||
-              (title === "Offline" && loadingOffline)
-            ) ? (
+              !(
+                (title === "Online" && loadingOnline) ||
+                (title === "Offline" && loadingOffline)
+              ) ? (
               <tr>
                 <td
                   colSpan={10}
@@ -420,33 +557,53 @@ export default function Bookings() {
                     </span>
                   </td>
                   <td className="px-6 py-4 text-right">
-                    <button
-                      onClick={() => {
-                        setSelectedBooking(booking);
-                        setIsSidebarOpen(true);
-                      }}
-                      className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg cursor-pointer transition-colors"
-                      title="View Details"
-                    >
-                      <Eye className="w-4 h-4" />
-                    </button>
+                    <div className="flex items-center justify-end gap-1">
+                      <button
+                        onClick={() => {
+                          setSelectedBooking(booking);
+                          setIsSidebarOpen(true);
+                        }}
+                        className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg cursor-pointer transition-colors"
+                        title="View Details"
+                      >
+                        <Eye className="w-4 h-4" />
+                      </button>
+                      <button
+                        onClick={() => handleOpenEditModal(booking)}
+                        className="p-2 text-gray-400 hover:text-saffron-600 hover:bg-saffron-50 rounded-lg cursor-pointer transition-colors"
+                        title="Edit Booking"
+                      >
+                        <Edit2 className="w-4 h-4" />
+                      </button>
+                      <button
+                        onClick={() => handleDeleteBooking(booking.id)}
+                        disabled={deletingId === booking.id}
+                        className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg cursor-pointer transition-colors disabled:opacity-50"
+                        title="Delete Booking"
+                      >
+                        {deletingId === booking.id ? (
+                          <span className="w-4 h-4 border-2 border-red-500 border-t-transparent rounded-full animate-spin inline-block"></span>
+                        ) : (
+                          <Trash2 className="w-4 h-4" />
+                        )}
+                      </button>
+                    </div>
                   </td>
                   <td className="px-6 py-4">
                     <div className="flex flex-col gap-2">
                       <select
-                        className={`text-xs border border-gray-200 rounded-lg px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-saffron-500 capitalize bg-white min-w-[100px] cursor-pointer ${
-                          pendingBookingStatus[booking.id] ||
+                        className={`text-xs border border-gray-200 rounded-lg px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-saffron-500 capitalize bg-white min-w-[100px] cursor-pointer ${pendingBookingStatus[booking.id] ||
                           booking.bookingstatus === "success" ||
                           pendingBookingStatus[booking.id] ||
                           booking.bookingstatus === "completed" ||
                           pendingBookingStatus[booking.id] ||
                           booking.bookingstatus === "confirmed"
-                            ? "text-emerald-600"
-                            : pendingBookingStatus[booking.id] ||
-                                booking.bookingstatus === "pending"
-                              ? "text-amber-600"
-                              : "text-red-600"
-                        }`}
+                          ? "text-emerald-600"
+                          : pendingBookingStatus[booking.id] ||
+                            booking.bookingstatus === "pending"
+                            ? "text-amber-600"
+                            : "text-red-600"
+                          }`}
                         value={
                           pendingBookingStatus[booking.id] ||
                           booking.bookingstatus
@@ -471,7 +628,7 @@ export default function Bookings() {
                       </select>
                       {pendingBookingStatus[booking.id] &&
                         pendingBookingStatus[booking.id] !==
-                          booking.bookingstatus && (
+                        booking.bookingstatus && (
                           <button
                             onClick={(e) => {
                               e.stopPropagation();
@@ -514,15 +671,35 @@ export default function Bookings() {
                     <p className="w-[180px] text-sm font-semibold text-gray-800 line-clamp-3 break-words">
                       {booking.eventname}
                     </p>
-                    {booking.deliverymode && (
-                      <p className="mt-2">
+                    <div className="flex flex-wrap gap-1 mt-2">
+                      {booking.deliverymode && (
                         <span
                           className={`inline-block px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${booking.deliverymode === "online" ? "bg-pink-100 text-pink-700 border border-pink-200" : "bg-emerald-100 text-emerald-700 border border-emerald-200"}`}
                         >
                           {booking.deliverymode}
                         </span>
-                      </p>
-                    )}
+                      )}
+                      {booking.leveltype && (
+                        <span
+                          className={`inline-block px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${booking.leveltype === "level2" ? "bg-indigo-100 text-indigo-700 border border-indigo-200" : "bg-blue-100 text-blue-700 border border-blue-200"}`}
+                        >
+                          {booking.leveltype === "level2" ? "Level 2" : "Level 1"}
+                        </span>
+                      )}
+                      {booking.leveltype === "level2" && booking.pricetype && (
+                        <span
+                          className={`inline-block px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${
+                            booking.pricetype?.toLowerCase() === "platinum"
+                              ? "bg-purple-100 text-purple-700 border border-purple-200"
+                              : booking.pricetype?.toLowerCase() === "gold"
+                              ? "bg-amber-100 text-amber-700 border border-amber-200"
+                              : "bg-slate-100 text-slate-700 border border-slate-200"
+                          }`}
+                        >
+                          {booking.pricetype}
+                        </span>
+                      )}
+                    </div>
                   </td>
                   <td className="px-6 py-4">
                     <div className="flex items-center gap-2 text-sm text-gray-600">
@@ -540,22 +717,6 @@ export default function Bookings() {
                   <td className="px-6 py-4 font-semibold text-gray-800">
                     ₹{booking.totalamount}
                   </td>
-                  <td className="px-6 py-4 text-center">
-                    {booking.screenshot ? (
-                      <a
-                        href={`${api.defaults.baseURL?.replace("/api", "")}${booking.screenshot}`}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="inline-flex items-center justify-center p-1.5 text-saffron-500 hover:text-saffron-700 bg-saffron-50 hover:bg-saffron-100 rounded-md transition-colors"
-                        title="View Screenshot"
-                        onClick={(e) => e.stopPropagation()}
-                      >
-                        <Eye className="w-4 h-4" />
-                      </a>
-                    ) : (
-                      <span className="text-gray-400 text-xs">-</span>
-                    )}
-                  </td>
 
                   <td className="px-6 py-4">
                     <div className="flex items-center gap-2 text-sm text-gray-600">
@@ -567,14 +728,14 @@ export default function Bookings() {
                             : booking.createdAt
                         )
                           ? new Date(
-                              (title === "Online"
-                                ? booking.bookingdate
-                                : booking.createdAt) as string,
-                            ).toLocaleDateString("en-US", {
-                              month: "short",
-                              day: "numeric",
-                              year: "numeric",
-                            })
+                            (title === "Online"
+                              ? booking.bookingdate
+                              : booking.createdAt) as string,
+                          ).toLocaleDateString("en-US", {
+                            month: "short",
+                            day: "numeric",
+                            year: "numeric",
+                          })
                           : "-"}
                       </span>
                     </div>
@@ -629,60 +790,484 @@ export default function Bookings() {
     <div className="space-y-6 relative">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-gray-800">Event Bookings</h1>
+          <h1 className="text-3xl font-bold text-gray-800">
+            {isEditModalOpen ? "Edit Booking" : "Event Bookings"}
+          </h1>
           <p className="text-gray-500 mt-1">
-            Manage all event registrations and payments.
+            {isEditModalOpen
+              ? `Update details for booking #${editingBooking?.id || ""}`
+              : "Manage all event registrations and payments."}
           </p>
         </div>
-      </div>
-
-      <div className="bg-white rounded-2xl shadow-elegant border border-saffron-50/50 overflow-hidden">
-        {renderFilters(
-          "Offline",
-          offlineSearchTerm,
-          setOfflineSearchTerm,
-          offlineEventId,
-          setOfflineEventId,
-          offlineStartDate,
-          setOfflineStartDate,
-          offlineEndDate,
-          setOfflineEndDate,
-          fetchOfflineBookings,
-          setCurrentPageOffline,
-        )}
-        {renderTable(
-          "Offline",
-          paginatedOfflineBookings,
-          totalOfflineItems,
-          currentPageOffline,
-          totalOfflinePages,
-          setCurrentPageOffline,
+        {isEditModalOpen && (
+          <button
+            type="button"
+            onClick={() => {
+              setIsEditModalOpen(false);
+              setEditingBooking(null);
+            }}
+            className="flex items-center gap-2 px-4 py-2.5 border border-gray-200 bg-white hover:bg-gray-50 text-gray-700 rounded-xl text-sm font-medium transition-colors shadow-sm cursor-pointer"
+          >
+            <ArrowLeft className="w-4 h-4" />
+            Back to Bookings
+          </button>
         )}
       </div>
 
-      <div className="bg-white rounded-2xl shadow-elegant border border-saffron-50/50 overflow-hidden mt-8">
-        {renderFilters(
-          "Online",
-          onlineSearchTerm,
-          setOnlineSearchTerm,
-          onlineEventId,
-          setOnlineEventId,
-          onlineStartDate,
-          setOnlineStartDate,
-          onlineEndDate,
-          setOnlineEndDate,
-          fetchOnlineBookings,
-          setCurrentPageOnline,
-        )}
-        {renderTable(
-          "Online",
-          paginatedOnlineBookings,
-          totalOnlineItems,
-          currentPageOnline,
-          totalOnlinePages,
-          setCurrentPageOnline,
-        )}
-      </div>
+      {isEditModalOpen && editingBooking ? (
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="bg-white rounded-2xl shadow-elegant border border-saffron-50/50 p-6 md:p-8"
+        >
+          <div className="flex justify-between items-center mb-6 pb-4 border-b border-gray-100">
+            <div>
+              <h2 className="text-xl font-bold text-gray-800">
+                Edit Booking #{editingBooking.id}
+              </h2>
+              <p className="text-sm text-gray-500 mt-0.5">
+                {editingBooking.eventname} ({editingBooking.deliverymode})
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => {
+                setIsEditModalOpen(false);
+                setEditingBooking(null);
+              }}
+              className="p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors cursor-pointer"
+              title="Close form"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
+
+          <form onSubmit={handleSaveEdit} className="space-y-6">
+            {/* Personal Information */}
+            <div>
+              <h4 className="text-sm font-semibold text-gray-700 uppercase tracking-wider mb-3">
+                Participant Details
+              </h4>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-medium text-gray-600 mb-1">
+                    Full Name *
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={editForm.fullname}
+                    onChange={(e) =>
+                      setEditForm({ ...editForm, fullname: e.target.value })
+                    }
+                    className="w-full px-3 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-saffron-500/50 text-sm"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-gray-600 mb-1">
+                    Email Address *
+                  </label>
+                  <input
+                    type="email"
+                    required
+                    value={editForm.email}
+                    onChange={(e) =>
+                      setEditForm({ ...editForm, email: e.target.value })
+                    }
+                    className="w-full px-3 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-saffron-500/50 text-sm"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-gray-600 mb-1">
+                    Phone *
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={editForm.phone}
+                    onChange={(e) =>
+                      setEditForm({ ...editForm, phone: e.target.value })
+                    }
+                    className="w-full px-3 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-saffron-500/50 text-sm"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-gray-600 mb-1">
+                    WhatsApp
+                  </label>
+                  <input
+                    type="text"
+                    value={editForm.whatsapp}
+                    onChange={(e) =>
+                      setEditForm({ ...editForm, whatsapp: e.target.value })
+                    }
+                    className="w-full px-3 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-saffron-500/50 text-sm"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-gray-600 mb-1">
+                    Gender
+                  </label>
+                  <select
+                    value={editForm.gender}
+                    onChange={(e) =>
+                      setEditForm({ ...editForm, gender: e.target.value })
+                    }
+                    className="w-full px-3 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-saffron-500/50 text-sm bg-white"
+                  >
+                    <option value="Male">Male</option>
+                    <option value="Female">Female</option>
+                    <option value="Other">Other</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-gray-600 mb-1">
+                    Age
+                  </label>
+                  <input
+                    type="number"
+                    min="1"
+                    max="120"
+                    value={editForm.age}
+                    onChange={(e) =>
+                      setEditForm({
+                        ...editForm,
+                        age: parseInt(e.target.value) || 0,
+                      })
+                    }
+                    className="w-full px-3 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-saffron-500/50 text-sm"
+                  />
+                </div>
+                <div className="md:col-span-2">
+                  <label className="block text-xs font-medium text-gray-600 mb-1">
+                    Occupation
+                  </label>
+                  <input
+                    type="text"
+                    value={editForm.occupation}
+                    onChange={(e) =>
+                      setEditForm({ ...editForm, occupation: e.target.value })
+                    }
+                    className="w-full px-3 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-saffron-500/50 text-sm"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Location */}
+            <div>
+              <h4 className="text-sm font-semibold text-gray-700 uppercase tracking-wider mb-3">
+                Address / Location
+              </h4>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                  <label className="block text-xs font-medium text-gray-600 mb-1">
+                    City
+                  </label>
+                  <input
+                    type="text"
+                    value={editForm.city}
+                    onChange={(e) =>
+                      setEditForm({ ...editForm, city: e.target.value })
+                    }
+                    className="w-full px-3 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-saffron-500/50 text-sm"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-gray-600 mb-1">
+                    State
+                  </label>
+                  <input
+                    type="text"
+                    value={editForm.state}
+                    onChange={(e) =>
+                      setEditForm({ ...editForm, state: e.target.value })
+                    }
+                    className="w-full px-3 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-saffron-500/50 text-sm"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-gray-600 mb-1">
+                    Country
+                  </label>
+                  <input
+                    type="text"
+                    value={editForm.country}
+                    onChange={(e) =>
+                      setEditForm({ ...editForm, country: e.target.value })
+                    }
+                    className="w-full px-3 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-saffron-500/50 text-sm"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Participant Counts & Fees */}
+            <div>
+              <h4 className="text-sm font-semibold text-gray-700 uppercase tracking-wider mb-3">
+                Participants & Amount
+              </h4>
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <div>
+                  <label className="block text-xs font-medium text-gray-600 mb-1">
+                    Adults Count
+                  </label>
+                  <input
+                    type="number"
+                    min="0"
+                    value={editForm.adultcount}
+                    onChange={(e) => {
+                      const adults = parseInt(e.target.value) || 0;
+                      setEditForm({
+                        ...editForm,
+                        adultcount: adults,
+                        participants: adults + editForm.childrencount,
+                      });
+                    }}
+                    className="w-full px-3 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-saffron-500/50 text-sm"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-gray-600 mb-1">
+                    Children Count
+                  </label>
+                  <input
+                    type="number"
+                    min="0"
+                    value={editForm.childrencount}
+                    onChange={(e) => {
+                      const children = parseInt(e.target.value) || 0;
+                      setEditForm({
+                        ...editForm,
+                        childrencount: children,
+                        participants: editForm.adultcount + children,
+                      });
+                    }}
+                    className="w-full px-3 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-saffron-500/50 text-sm"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-gray-600 mb-1">
+                    Total Participants
+                  </label>
+                  <input
+                    type="number"
+                    min="1"
+                    value={editForm.participants}
+                    onChange={(e) =>
+                      setEditForm({
+                        ...editForm,
+                        participants: parseInt(e.target.value) || 1,
+                      })
+                    }
+                    className="w-full px-3 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-saffron-500/50 text-sm"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-gray-600 mb-1">
+                    Total Amount (₹)
+                  </label>
+                  <input
+                    type="text"
+                    value={editForm.totalamount}
+                    onChange={(e) =>
+                      setEditForm({ ...editForm, totalamount: e.target.value })
+                    }
+                    className="w-full px-3 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-saffron-500/50 text-sm"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Status & Payment */}
+            <div>
+              <h4 className="text-sm font-semibold text-gray-700 uppercase tracking-wider mb-3">
+                Status & Dates
+              </h4>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                  <label className="block text-xs font-medium text-gray-600 mb-1">
+                    Booking Status
+                  </label>
+                  <select
+                    value={editForm.bookingstatus}
+                    onChange={(e) =>
+                      setEditForm({ ...editForm, bookingstatus: e.target.value })
+                    }
+                    className="w-full px-3 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-saffron-500/50 text-sm bg-white capitalize"
+                  >
+                    <option value="pending">Pending</option>
+                    <option value="confirmed">Confirmed</option>
+                    <option value="cancelled">Cancelled</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-gray-600 mb-1">
+                    Payment Status
+                  </label>
+                  <select
+                    value={editForm.paymentstatus}
+                    onChange={(e) =>
+                      setEditForm({ ...editForm, paymentstatus: e.target.value })
+                    }
+                    className="w-full px-3 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-saffron-500/50 text-sm bg-white capitalize"
+                  >
+                    <option value="pending">Pending</option>
+                    <option value="paid">Paid</option>
+                    <option value="failed">Failed</option>
+                    <option value="refunded">Refunded</option>
+                  </select>
+                </div>
+                {editingBooking.leveltype === "level2" && (
+                  <div>
+                    <label className="block text-xs font-medium text-gray-600 mb-1">
+                      Package / Price Type (Level 2)
+                    </label>
+                    <select
+                      value={editForm.pricetype}
+                      onChange={(e) =>
+                        setEditForm({ ...editForm, pricetype: e.target.value })
+                      }
+                      className="w-full px-3 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-saffron-500/50 text-sm bg-white capitalize"
+                    >
+                      <option value="platinum">Platinum</option>
+                      <option value="gold">Gold</option>
+                      <option value="silver">Silver</option>
+                    </select>
+                  </div>
+                )}
+                {editingBooking.deliverymode === "online" && (
+                  <>
+                    <div>
+                      <label className="block text-xs font-medium text-gray-600 mb-1">
+                        Booking Date (Online)
+                      </label>
+                      <input
+                        type="date"
+                        value={editForm.bookingdate}
+                        onChange={(e) =>
+                          setEditForm({
+                            ...editForm,
+                            bookingdate: e.target.value,
+                          })
+                        }
+                        className="w-full px-3 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-saffron-500/50 text-sm bg-white"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-gray-600 mb-1">
+                        Booking Time
+                      </label>
+                      <input
+                        type="time"
+                        value={editForm.bookingtime}
+                        onChange={(e) =>
+                          setEditForm({
+                            ...editForm,
+                            bookingtime: e.target.value,
+                          })
+                        }
+                        className="w-full px-3 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-saffron-500/50 text-sm bg-white"
+                      />
+                    </div>
+                  </>
+                )}
+                <div className="md:col-span-3">
+                  <label className="block text-xs font-medium text-gray-600 mb-1">
+                    Remarks / Notes
+                  </label>
+                  <textarea
+                    rows={2}
+                    value={editForm.remarks}
+                    onChange={(e) =>
+                      setEditForm({ ...editForm, remarks: e.target.value })
+                    }
+                    className="w-full px-3 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-saffron-500/50 text-sm"
+                    placeholder="Additional remarks..."
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-end gap-3 pt-4 border-t border-gray-100">
+              <button
+                type="button"
+                onClick={() => {
+                  setIsEditModalOpen(false);
+                  setEditingBooking(null);
+                }}
+                className="px-5 py-2.5 border border-gray-200 rounded-xl text-gray-600 hover:bg-gray-50 text-sm font-medium transition-colors cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={savingEdit}
+                className="px-6 py-2.5 bg-saffron-500 hover:bg-saffron-600 text-white rounded-xl text-sm font-medium transition-colors shadow-sm disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 cursor-pointer"
+              >
+                {savingEdit ? (
+                  <>
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                    Saving...
+                  </>
+                ) : (
+                  "Save Changes"
+                )}
+              </button>
+            </div>
+          </form>
+        </motion.div>
+      ) : (
+        <>
+          <div className="bg-white rounded-2xl shadow-elegant border border-saffron-50/50 overflow-hidden">
+            {renderFilters(
+              "Offline",
+              offlineSearchTerm,
+              setOfflineSearchTerm,
+              offlineEventId,
+              setOfflineEventId,
+              offlineStartDate,
+              setOfflineStartDate,
+              offlineEndDate,
+              setOfflineEndDate,
+              fetchOfflineBookings,
+              setCurrentPageOffline,
+            )}
+            {renderTable(
+              "Offline",
+              paginatedOfflineBookings,
+              totalOfflineItems,
+              currentPageOffline,
+              totalOfflinePages,
+              setCurrentPageOffline,
+            )}
+          </div>
+
+          <div className="bg-white rounded-2xl shadow-elegant border border-saffron-50/50 overflow-hidden mt-8">
+            {renderFilters(
+              "Online",
+              onlineSearchTerm,
+              setOnlineSearchTerm,
+              onlineEventId,
+              setOnlineEventId,
+              onlineStartDate,
+              setOnlineStartDate,
+              onlineEndDate,
+              setOnlineEndDate,
+              fetchOnlineBookings,
+              setCurrentPageOnline,
+            )}
+            {renderTable(
+              "Online",
+              paginatedOnlineBookings,
+              totalOnlineItems,
+              currentPageOnline,
+              totalOnlinePages,
+              setCurrentPageOnline,
+            )}
+          </div>
+        </>
+      )}
 
       {/* Right Sidebar for Booking Details */}
       <AnimatePresence>
@@ -706,12 +1291,29 @@ export default function Bookings() {
                 <h2 className="text-xl font-bold text-gray-800">
                   Booking #{selectedBooking.id}
                 </h2>
-                <button
-                  onClick={() => setIsSidebarOpen(false)}
-                  className="p-2 text-gray-400 hover:bg-white hover:text-gray-800 rounded-full transition-colors shadow-sm border border-transparent hover:border-gray-200"
-                >
-                  <X className="w-5 h-5" />
-                </button>
+                <div className="flex items-center gap-1">
+                  <button
+                    onClick={() => handleOpenEditModal(selectedBooking)}
+                    className="p-2 text-gray-400 hover:text-saffron-600 hover:bg-white rounded-full transition-colors border border-transparent hover:border-gray-200"
+                    title="Edit Booking"
+                  >
+                    <Edit2 className="w-4 h-4" />
+                  </button>
+                  <button
+                    onClick={() => handleDeleteBooking(selectedBooking.id)}
+                    disabled={deletingId === selectedBooking.id}
+                    className="p-2 text-gray-400 hover:text-red-600 hover:bg-white rounded-full transition-colors border border-transparent hover:border-gray-200 disabled:opacity-50"
+                    title="Delete Booking"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                  <button
+                    onClick={() => setIsSidebarOpen(false)}
+                    className="p-2 text-gray-400 hover:bg-white hover:text-gray-800 rounded-full transition-colors shadow-sm border border-transparent hover:border-gray-200"
+                  >
+                    <X className="w-5 h-5" />
+                  </button>
+                </div>
               </div>
 
               <div className="p-6 overflow-y-auto flex-1 space-y-6">
@@ -738,9 +1340,10 @@ export default function Bookings() {
                       </p>
                     </div>
                     <p className="text-gray-600 text-sm flex items-center gap-2 bg-white px-3 py-1.5 rounded-full border border-saffron-100 w-full justify-center">
-                      <MapPin className="w-4 h-4 text-saffron-500" />{" "}
-                      {selectedBooking.city}, {selectedBooking.state},{" "}
-                      {selectedBooking.country}
+                      <MapPin className="w-4 h-4 text-saffron-500 shrink-0" />{" "}
+                      {[selectedBooking.city, selectedBooking.state, selectedBooking.country]
+                        .filter(Boolean)
+                        .join(", ") || "Location not specified"}
                     </p>
                     <p className="text-gray-600 text-sm text-center mt-2">
                       Occupation: {selectedBooking.occupation}
@@ -771,10 +1374,10 @@ export default function Bookings() {
                             : selectedBooking.createdAt
                         )
                           ? new Date(
-                              (selectedBooking.deliverymode === "online"
-                                ? selectedBooking.bookingdate
-                                : selectedBooking.createdAt) as string,
-                            ).toLocaleDateString()
+                            (selectedBooking.deliverymode === "online"
+                              ? selectedBooking.bookingdate
+                              : selectedBooking.createdAt) as string,
+                          ).toLocaleDateString()
                           : "-"}
                       </p>
                     </div>
@@ -811,6 +1414,24 @@ export default function Bookings() {
                           ₹{selectedBooking.totalamount}
                         </span>
                       </div>
+                      {selectedBooking.leveltype === "level2" && (
+                        <div className="flex justify-between items-center py-1.5 border-t border-gray-200/60">
+                          <span className="text-gray-600 text-sm">Selected Package</span>
+                          <span
+                            className={`inline-block px-2.5 py-0.5 rounded-full text-xs font-bold uppercase tracking-wider shadow-sm ${
+                              selectedBooking.pricetype?.toLowerCase() === "platinum"
+                                ? "bg-purple-100 text-purple-800 border border-purple-300"
+                                : selectedBooking.pricetype?.toLowerCase() === "gold"
+                                ? "bg-amber-100 text-amber-800 border border-amber-300"
+                                : selectedBooking.pricetype?.toLowerCase() === "silver"
+                                ? "bg-slate-100 text-slate-800 border border-slate-300"
+                                : "bg-gray-100 text-gray-700 border border-gray-300"
+                            }`}
+                          >
+                            {selectedBooking.pricetype || "Standard"}
+                          </span>
+                        </div>
+                      )}
                       <div className="flex justify-between items-center">
                         <span className="text-gray-600">Payment Status</span>
                         <span
@@ -827,16 +1448,6 @@ export default function Bookings() {
                           {selectedBooking.bookingstatus}
                         </span>
                       </div>
-                      {selectedBooking.transactionid && (
-                        <div className="flex justify-between items-center pt-2 border-t border-gray-200 mt-2">
-                          <span className="text-gray-600 text-sm">
-                            Transaction ID
-                          </span>
-                          <span className="font-mono text-xs bg-white px-2 py-1 border border-gray-200 rounded">
-                            {selectedBooking.transactionid}
-                          </span>
-                        </div>
-                      )}
                       {selectedBooking.screenshot && (
                         <div className="pt-3 border-t border-gray-200 mt-2">
                           <p className="text-gray-600 text-sm mb-2 font-medium">
@@ -863,40 +1474,35 @@ export default function Bookings() {
                     <p className="text-sm font-semibold text-gray-500 mb-3 uppercase tracking-wider">
                       Event Details
                     </p>
-                    <div className="space-y-2 text-sm text-gray-700">
-                      {selectedBooking.programtype && (
-                        <p className="flex items-center gap-2">
-                          <span className="font-medium">Program Type:</span>{" "}
-                          <span className="inline-block px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-purple-100 text-purple-700 border border-purple-200 shadow-sm">
+                    <div className="space-y-3 text-sm text-gray-700">
+                      {selectedBooking.eventname && (
+                        <div>
+                          <p className="text-xs text-gray-500 uppercase font-semibold">Event Name</p>
+                          <p className="font-bold text-gray-900 text-base">
+                            {selectedBooking.eventname}
+                          </p>
+                        </div>
+                      )}
+
+                      <div className="flex flex-wrap items-center gap-2 pt-1">
+                        <span
+                          className={`inline-block px-2.5 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${
+                            selectedBooking.leveltype === "level2"
+                              ? "bg-indigo-100 text-indigo-700 border border-indigo-200"
+                              : "bg-blue-100 text-blue-700 border border-blue-200"
+                          }`}
+                        >
+                          {selectedBooking.leveltype === "level2" ? "Level 2 Event" : "Level 1 Event"}
+                        </span>
+
+                        {selectedBooking.programtype && (
+                          <span className="inline-block px-2.5 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-purple-100 text-purple-700 border border-purple-200 shadow-sm">
                             {selectedBooking.programtype}
                           </span>
-                        </p>
-                      )}
+                        )}
 
-                      {selectedBooking.leveltype === "level2" ? (
-                        <>
-                          <p>
-                            <span className="font-medium">
-                              Event From Date:
-                            </span>{" "}
-                            {selectedBooking.eventdate}
-                          </p>
-                          <p>
-                            <span className="font-medium">Event To Date:</span>{" "}
-                            {selectedBooking.eventtodate}
-                          </p>
-                        </>
-                      ) : (
-                        <p>
-                          <span className="font-medium">Event Date:</span>{" "}
-                          {selectedBooking.eventdate}
-                        </p>
-                      )}
-
-                      <p className="flex items-center gap-2">
-                        <span className="font-medium">Delivery Mode:</span>{" "}
                         <span
-                          className={`inline-block px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${
+                          className={`inline-block px-2.5 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${
                             selectedBooking.deliverymode === "online"
                               ? "bg-pink-100 text-pink-700 border border-pink-200"
                               : "bg-emerald-100 text-emerald-700 border border-emerald-200"
@@ -904,26 +1510,118 @@ export default function Bookings() {
                         >
                           {selectedBooking.deliverymode}
                         </span>
-                      </p>
+                      </div>
 
-                      {selectedBooking.deliverymode === "online" &&
-                        selectedBooking.bookingdate && (
-                          <p>
-                            <span className="font-medium">
-                              Booking Date (Online):
-                            </span>{" "}
-                            {selectedBooking.bookingdate}
+                      {/* Level 2 Specific Details */}
+                      {selectedBooking.leveltype === "level2" ? (
+                        <div className="pt-2 border-t border-gray-200 space-y-2.5">
+                          <p className="flex justify-between items-center text-sm">
+                            <span className="font-medium text-gray-600">Event From:</span>
+                            <span className="font-semibold text-gray-800">{selectedBooking.eventdate || "-"}</span>
                           </p>
-                        )}
+                          <p className="flex justify-between items-center text-sm">
+                            <span className="font-medium text-gray-600">Event To:</span>
+                            <span className="font-semibold text-gray-800">{selectedBooking.eventtodate || "-"}</span>
+                          </p>
 
-                      <p>
-                        <span className="font-medium">Venue:</span>{" "}
-                        {selectedBooking.address}
-                      </p>
-                      <p>
-                        <span className="font-medium">Fee (per person):</span> ₹
-                        {selectedBooking.registrationfee}
-                      </p>
+                          {/* Selected Package Tier Box */}
+                          <div className="bg-white p-3.5 rounded-xl border border-gray-200 space-y-2.5 shadow-sm">
+                            <div className="flex justify-between items-center">
+                              <span className="text-xs font-bold text-gray-500 uppercase tracking-wider">Booked Package</span>
+                              <span
+                                className={`px-2.5 py-0.5 rounded-full text-xs font-bold uppercase tracking-wider ${
+                                  selectedBooking.pricetype?.toLowerCase() === "platinum"
+                                    ? "bg-purple-100 text-purple-800 border border-purple-300"
+                                    : selectedBooking.pricetype?.toLowerCase() === "gold"
+                                    ? "bg-amber-100 text-amber-800 border border-amber-300"
+                                    : selectedBooking.pricetype?.toLowerCase() === "silver"
+                                    ? "bg-slate-100 text-slate-800 border border-slate-300"
+                                    : "bg-gray-100 text-gray-700 border border-gray-300"
+                                }`}
+                              >
+                                {selectedBooking.pricetype || "Standard"}
+                              </span>
+                            </div>
+
+                            <div className="flex justify-between items-center text-xs">
+                              <span className="text-gray-500">Tier Unit Price:</span>
+                              <span className="font-bold text-gray-900">
+                                {selectedBooking.pricetype?.toLowerCase() === "platinum" && selectedBooking.platinumprice
+                                  ? `₹${selectedBooking.platinumprice} / person`
+                                  : selectedBooking.pricetype?.toLowerCase() === "gold" && selectedBooking.goldprice
+                                  ? `₹${selectedBooking.goldprice} / person`
+                                  : selectedBooking.pricetype?.toLowerCase() === "silver" && selectedBooking.silverprice
+                                  ? `₹${selectedBooking.silverprice} / person`
+                                  : selectedBooking.registrationfee
+                                  ? `₹${selectedBooking.registrationfee} / person`
+                                  : "-"}
+                              </span>
+                            </div>
+
+                            {(selectedBooking.platinumprice || selectedBooking.goldprice || selectedBooking.silverprice) && (
+                              <div className="pt-2 border-t border-gray-100">
+                                <p className="text-[11px] font-semibold text-gray-500 uppercase tracking-wide mb-1.5">
+                                  Level 2 Tier Rates
+                                </p>
+                                <div className="grid grid-cols-3 gap-1.5 text-center text-xs">
+                                  {selectedBooking.platinumprice && (
+                                    <div className={`p-1.5 rounded-lg border ${selectedBooking.pricetype?.toLowerCase() === "platinum" ? "bg-purple-50 border-purple-300 font-bold" : "bg-gray-50 border-gray-200"}`}>
+                                      <p className="text-[10px] text-purple-700 font-semibold uppercase">Platinum</p>
+                                      <p className="text-gray-800">₹{selectedBooking.platinumprice}</p>
+                                    </div>
+                                  )}
+                                  {selectedBooking.goldprice && (
+                                    <div className={`p-1.5 rounded-lg border ${selectedBooking.pricetype?.toLowerCase() === "gold" ? "bg-amber-50 border-amber-300 font-bold" : "bg-gray-50 border-gray-200"}`}>
+                                      <p className="text-[10px] text-amber-700 font-semibold uppercase">Gold</p>
+                                      <p className="text-gray-800">₹{selectedBooking.goldprice}</p>
+                                    </div>
+                                  )}
+                                  {selectedBooking.silverprice && (
+                                    <div className={`p-1.5 rounded-lg border ${selectedBooking.pricetype?.toLowerCase() === "silver" ? "bg-slate-50 border-slate-300 font-bold" : "bg-gray-50 border-gray-200"}`}>
+                                      <p className="text-[10px] text-slate-700 font-semibold uppercase">Silver</p>
+                                      <p className="text-gray-800">₹{selectedBooking.silverprice}</p>
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+                            )}
+
+                            {selectedBooking.lastofferdate && (
+                              <p className="text-[11px] text-red-600 bg-red-50 p-1.5 rounded border border-red-200 text-center font-medium">
+                                Offer Ends: {new Date(selectedBooking.lastofferdate).toLocaleDateString()}
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                      ) : (
+                        /* Level 1 Specific Details */
+                        <div className="pt-2 border-t border-gray-200 space-y-2">
+                          <p className="flex justify-between items-center text-sm">
+                            <span className="font-medium text-gray-600">Event Date:</span>
+                            <span className="font-semibold text-gray-800">{selectedBooking.eventdate || "-"}</span>
+                          </p>
+                          <p className="flex justify-between items-center text-sm">
+                            <span className="font-medium text-gray-600">Registration Fee (per person):</span>
+                            <span className="font-bold text-gray-900">₹{selectedBooking.registrationfee || 0}</span>
+                          </p>
+                        </div>
+                      )}
+
+                      {selectedBooking.deliverymode === "online" && selectedBooking.bookingdate && (
+                        <p className="flex justify-between items-center pt-2 border-t border-gray-200 text-sm">
+                          <span className="font-medium text-gray-600">Booking Date (Online):</span>
+                          <span className="font-semibold text-gray-800">
+                            {selectedBooking.bookingdate} {selectedBooking.bookingtime ? `@ ${selectedBooking.bookingtime}` : ""}
+                          </span>
+                        </p>
+                      )}
+
+                      <div className="pt-2 border-t border-gray-200 text-sm">
+                        <span className="font-medium text-gray-600 block mb-0.5">Venue:</span>
+                        <span className="text-gray-800 font-medium">
+                          {selectedBooking.address || "Online / Not specified"}
+                        </span>
+                      </div>
                     </div>
                   </div>
 

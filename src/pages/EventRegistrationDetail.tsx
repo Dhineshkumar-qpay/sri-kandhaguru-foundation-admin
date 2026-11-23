@@ -985,7 +985,7 @@ export default function RegistrationDetail() {
                   </p>
                 </div>
               )}
-              {showPaymentQr && !isPaymentCompleted && (
+              {registration.paymentstatus.toLowerCase() === "pending" && (
                 <section className="mt-6 w-full rounded-2xl border border-green-100 bg-gradient-to-br from-white to-green-50/60 p-5 text-left shadow-sm">
                   <h3 className="text-sm font-bold uppercase tracking-wider text-gray-700">
                     Update Payment Status

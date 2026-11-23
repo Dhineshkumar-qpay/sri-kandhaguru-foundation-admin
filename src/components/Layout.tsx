@@ -29,6 +29,9 @@ import {
   ClipboardCheck,
   Clock3,
   Package,
+  HandHeart,
+  WifiOff,
+  Globe,
 } from "lucide-react";
 import { clsx } from "clsx";
 import { motion, AnimatePresence } from "framer-motion";
@@ -39,35 +42,57 @@ interface UserProfile {
   userType: string;
 }
 
-const sidebarLinks = [
-  { name: "Dashboard", path: "/dashboard", icon: LayoutDashboard },
+interface SidebarLink {
+  name: string;
+  path: string;
+  icon: React.ComponentType<{ className?: string }>;
+}
+
+interface SidebarSection {
+  title: string;
+  links: SidebarLink[];
+}
+
+const sidebarSections: SidebarSection[] = [
   {
-    name: "User Registration",
-    path: "/user-registration",
-    icon: UserRoundPlus,
+    title: "Offline Menus",
+    links: [
+      { name: "Dashboard", path: "/dashboard", icon: LayoutDashboard },
+      {
+        name: "User Registration",
+        path: "/user-registration",
+        icon: UserRoundPlus,
+      },
+      { name: "Event Registration", path: "/registration", icon: ClipboardList },
+      { name: "Sales History", path: "/purchase-history", icon: ReceiptText },
+      { name: "Offline Products", path: "/offline-products", icon: Package },
+      { name: "Offline Donations", path: "/offline-donations", icon: HandHeart },
+      { name: "Attendance", path: "/attendance", icon: CalendarCheck2 },
+      { name: "Attendance List", path: "/attendance-list", icon: Clock3 },
+      { name: "Staff Leaves", path: "/staff-leaves", icon: CalendarDays },
+      { name: "Leaves", path: "/leaves", icon: ClipboardCheck },
+      { name: "Staffs", path: "/staffs", icon: UserCog },
+    ],
   },
-  { name: "Event Registration", path: "/registration", icon: ClipboardList },
-  { name: "Sales History", path: "/purchase-history", icon: ReceiptText },
-  { name: "Offline Products", path: "/offline-products", icon: Package },
-  { name: "Attendance", path: "/attendance", icon: CalendarCheck2 },
-  { name: "Attendance List", path: "/attendance-list", icon: Clock3 },
-  { name: "Staff Leaves", path: "/staff-leaves", icon: CalendarDays },
-  { name: "Leaves", path: "/leaves", icon: ClipboardCheck },
-  { name: "Staffs", path: "/staffs", icon: UserCog },
-  { name: "Donations", path: "/donations", icon: Heart },
-  { name: "Event Bookings", path: "/bookings", icon: Ticket },
-  { name: "Orders", path: "/orders", icon: ShoppingCart },
-  { name: "Events", path: "/events", icon: Calendar },
-  { name: "Products", path: "/products", icon: ShoppingBag },
-  { name: "Categories", path: "/categories", icon: Tags },
-  { name: "Video Library", path: "/videos", icon: Video },
-  { name: "Video Testimonials", path: "/video-testimonials", icon: PlaySquare },
-  { name: "Gallery", path: "/gallery", icon: ImageIcon },
-  { name: "Users", path: "/users", icon: Users },
-  { name: "Contacts", path: "/contacts", icon: MessageSquare },
-  { name: "Reviews", path: "/reviews", icon: Star },
-  { name: "Banners", path: "/banners", icon: Monitor },
-  { name: "Settings", path: "/settings", icon: Settings },
+  {
+    title: "Online Menus",
+    links: [
+      { name: "Donations", path: "/donations", icon: Heart },
+      { name: "Event Bookings", path: "/bookings", icon: Ticket },
+      { name: "Orders", path: "/orders", icon: ShoppingCart },
+      { name: "Events", path: "/events", icon: Calendar },
+      { name: "Products", path: "/products", icon: ShoppingBag },
+      { name: "Categories", path: "/categories", icon: Tags },
+      { name: "Video Library", path: "/videos", icon: Video },
+      { name: "Video Testimonials", path: "/video-testimonials", icon: PlaySquare },
+      { name: "Gallery", path: "/gallery", icon: ImageIcon },
+      { name: "Users", path: "/users", icon: Users },
+      { name: "Contacts", path: "/contacts", icon: MessageSquare },
+      { name: "Reviews", path: "/reviews", icon: Star },
+      { name: "Banners", path: "/banners", icon: Monitor },
+      { name: "Settings", path: "/settings", icon: Settings },
+    ],
+  },
 ];
 
 export default function Layout() {
@@ -82,17 +107,23 @@ export default function Layout() {
     "/user-registration",
     "/registration",
     "/purchase-history",
+    "/offline-donations",
     "/attendance",
     "/staff-leaves",
   ]);
-  const visibleSidebarLinks = sidebarLinks.filter((link) => {
-    if (link.path === "/offline-products" && !isAdmin) return false;
-    if (link.path === "/leaves" && !isAdmin) return false;
-    if (link.path === "/attendance-list" && !isAdmin) return false;
-    if (link.path === "/attendance" && isAdmin) return false;
-    if (link.path === "/staff-leaves" && isAdmin) return false;
-    return !isStaff || staffVisiblePaths.has(link.path);
-  });
+  const visibleSections = sidebarSections
+    .map((section) => ({
+      ...section,
+      links: section.links.filter((link) => {
+        if (link.path === "/offline-products" && !isAdmin) return false;
+        if (link.path === "/leaves" && !isAdmin) return false;
+        if (link.path === "/attendance-list" && !isAdmin) return false;
+        if (link.path === "/attendance" && isAdmin) return false;
+        if (link.path === "/staff-leaves" && isAdmin) return false;
+        return !isStaff || staffVisiblePaths.has(link.path);
+      }),
+    }))
+    .filter((section) => section.links.length > 0);
 
   useEffect(() => {
     setMobileMenuOpen(false);
@@ -181,41 +212,117 @@ export default function Layout() {
           />
         </button>
 
-        <div className="flex-1 overflow-y-auto py-6 px-3 flex flex-col gap-2">
-          {visibleSidebarLinks.map((link) => {
-            const Icon = link.icon;
-            const isActive = location.pathname.startsWith(link.path);
+        <div className="flex-1 overflow-y-auto py-3 px-3 flex flex-col gap-3">
+          {visibleSections.map((section, sIndex) => {
+            const isOffline = section.title.toLowerCase().includes("offline");
 
             return (
-              <NavLink
-                key={link.name}
-                to={link.path}
-                className={({ isActive }) =>
-                  clsx(
-                    "flex items-center gap-3 px-3 py-3 rounded-xl transition-all duration-200 group relative",
-                    isActive
-                      ? "bg-gradient-to-r from-saffron-500 to-saffron-600 text-white shadow-md shadow-saffron-500/20"
-                      : "text-gray-600 hover:bg-saffron-50 hover:text-saffron-600",
-                  )
-                }
-                title={!sidebarOpen && !mobileMenuOpen ? link.name : undefined}
-              >
-                <Icon
-                  className={clsx(
-                    "w-5 h-5 shrink-0",
-                    isActive
-                      ? "text-white"
-                      : "text-gray-500 group-hover:text-saffron-600",
-                  )}
-                />
-                {(sidebarOpen || mobileMenuOpen) && (
-                  <span className="font-medium whitespace-nowrap">
-                    {link.name}
-                  </span>
+              <div key={section.title} className="flex flex-col gap-1.5">
+                {sIndex > 0 && (
+                  <div className="my-2 border-t-2 border-dashed border-saffron-200/80" />
                 )}
-              </NavLink>
-            );
-          })}
+
+                {sidebarOpen || mobileMenuOpen ? (
+                  <div className="px-1 pt-1 pb-1">
+                    <div
+                      className={clsx(
+                        "flex items-center justify-between px-3 py-1.5 rounded-xl border shadow-xs transition-all",
+                        isOffline
+                          ? "bg-gradient-to-r from-amber-50 to-orange-50/80 border-amber-200/80 text-amber-900"
+                          : "bg-gradient-to-r from-emerald-50 to-teal-50/80 border-emerald-200/80 text-emerald-900",
+                      )}
+                    >
+                      <div className="flex items-center gap-2">
+                        {isOffline ? (
+                          <WifiOff className="w-3.5 h-3.5 text-amber-600 shrink-0" />
+                        ) : (
+                          <Globe className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                        )}
+                        <span className="text-[11px] font-bold uppercase tracking-wider">
+                          {section.title}
+                        </span>
+                      </div>
+                      <span
+                        className={clsx(
+                          "text-[9px] font-extrabold px-1.5 py-0.5 rounded-md uppercase tracking-tight flex items-center gap-1",
+                          isOffline
+                            ? "bg-amber-100 text-amber-800 border border-amber-200/60"
+                            : "bg-emerald-100 text-emerald-800 border border-emerald-200/60",
+                        )}
+                      >
+                        <span
+                          className={clsx(
+                            "w-1.5 h-1.5 rounded-full",
+                            isOffline
+                              ? "bg-amber-500"
+                              : "bg-emerald-500 animate-pulse",
+                          )}
+                        />
+                        {isOffline ? "Offline" : "Online"}
+                      </span>
+                    </div>
+                  </div>
+                ) : (
+                  <div
+                    className="flex justify-center my-1"
+                    title={section.title}
+                  >
+                    <div
+                      className={clsx(
+                        "w-7 h-7 rounded-lg flex items-center justify-center border shadow-xs",
+                        isOffline
+                          ? "bg-amber-50 border-amber-200 text-amber-600"
+                          : "bg-emerald-50 border-emerald-200 text-emerald-600",
+                      )}
+                    >
+                      {isOffline ? (
+                        <WifiOff className="w-3.5 h-3.5" />
+                      ) : (
+                        <Globe className="w-3.5 h-3.5" />
+                      )}
+                    </div>
+                  </div>
+                )}
+
+              <div className="flex flex-col gap-1.5">
+                {section.links.map((link) => {
+                  const Icon = link.icon;
+                  const isActive = location.pathname.startsWith(link.path);
+
+                  return (
+                    <NavLink
+                      key={link.name}
+                      to={link.path}
+                      className={({ isActive }) =>
+                        clsx(
+                          "flex items-center gap-3 px-3 py-3 rounded-xl transition-all duration-200 group relative",
+                          isActive
+                            ? "bg-gradient-to-r from-saffron-500 to-saffron-600 text-white shadow-md shadow-saffron-500/20"
+                            : "text-gray-600 hover:bg-saffron-50 hover:text-saffron-600",
+                        )
+                      }
+                      title={!sidebarOpen && !mobileMenuOpen ? link.name : undefined}
+                    >
+                      <Icon
+                        className={clsx(
+                          "w-5 h-5 shrink-0",
+                          isActive
+                            ? "text-white"
+                            : "text-gray-500 group-hover:text-saffron-600",
+                        )}
+                      />
+                      {(sidebarOpen || mobileMenuOpen) && (
+                        <span className="font-medium whitespace-nowrap">
+                          {link.name}
+                        </span>
+                      )}
+                    </NavLink>
+                  );
+                })}
+              </div>
+            </div>
+          );
+        })}
         </div>
 
         {/* Logout Button */}

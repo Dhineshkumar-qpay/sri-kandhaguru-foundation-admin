@@ -48,6 +48,10 @@ interface Event {
   agenda?: { starttime: string; endtime: string; title: string }[];
   leveltype?: string;
   eventtodate?: string;
+  platinumprice?: number | string;
+  goldprice?: number | string;
+  silverprice?: number | string;
+  lastofferdate?: string;
 }
 
 
@@ -276,7 +280,7 @@ export default function Events() {
       if (file && file.size > 0) {
         const uploadData = new FormData();
         uploadData.append("image", file);
-        
+
         if (editingEvent && editingEvent.image) {
           uploadData.append("existingimage", editingEvent.image);
         } else {
@@ -305,6 +309,22 @@ export default function Events() {
           Number(formData.get("partcipants")) ||
           0,
         registrationfee: Number(formData.get("registrationfee")) || 0,
+        platinumprice:
+          levelType === "level2" && formData.get("platinumprice")
+            ? Number(formData.get("platinumprice"))
+            : null,
+        goldprice:
+          levelType === "level2" && formData.get("goldprice")
+            ? Number(formData.get("goldprice"))
+            : null,
+        silverprice:
+          levelType === "level2" && formData.get("silverprice")
+            ? Number(formData.get("silverprice"))
+            : null,
+        lastofferdate:
+          levelType === "level2" && formData.get("lastofferdate")
+            ? String(formData.get("lastofferdate"))
+            : null,
         venuename: formData.get("venuename") || "",
         address: formData.get("address") || "",
         city: formData.get("city") || "",
@@ -520,23 +540,21 @@ export default function Events() {
                       className="w-full px-4 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-saffron-500/50"
                     />
                   </div>
-                  {levelType === "level2" && (
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        To Date
-                      </label>
-                      <input
-                        name="eventtodate"
-                        defaultValue={
-                          editingEvent?.eventtodate
-                            ? editingEvent.eventtodate.split("T")[0]
-                            : ""
-                        }
-                        type="date"
-                        className="w-full px-4 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-saffron-500/50"
-                      />
-                    </div>
-                  )}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      To Date
+                    </label>
+                    <input
+                      name="eventtodate"
+                      defaultValue={
+                        editingEvent?.eventtodate
+                          ? editingEvent.eventtodate.split("T")[0]
+                          : ""
+                      }
+                      type="date"
+                      className="w-full px-4 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-saffron-500/50"
+                    />
+                  </div>
                   <div className="grid grid-cols-2 gap-2">
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -595,6 +613,81 @@ export default function Events() {
                   placeholder="e.g. 100"
                 />
               </div>
+
+              {levelType === "level2" && (
+                <>
+                  <div className="xl:col-span-3 border-t border-purple-100 pt-4 mt-2">
+                    <h4 className="text-sm font-bold text-purple-900 uppercase tracking-wider mb-1 flex items-center gap-2">
+                      <span className="w-2.5 h-2.5 rounded-full bg-purple-600"></span>
+                      Level 2 Tier Pricing & Offer Details
+                    </h4>
+                    <p className="text-xs text-purple-600">
+                      Configure Platinum, Gold, Silver tier pricing and offer validity for Level 2 programs.
+                    </p>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Platinum Price (₹)
+                    </label>
+                    <input
+                      name="platinumprice"
+                      defaultValue={editingEvent?.platinumprice || ""}
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      className="w-full px-4 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500/50"
+                      placeholder="e.g. 5000"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Gold Price (₹)
+                    </label>
+                    <input
+                      name="goldprice"
+                      defaultValue={editingEvent?.goldprice || ""}
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      className="w-full px-4 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500/50"
+                      placeholder="e.g. 3000"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Silver Price (₹)
+                    </label>
+                    <input
+                      name="silverprice"
+                      defaultValue={editingEvent?.silverprice || ""}
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      className="w-full px-4 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500/50"
+                      placeholder="e.g. 1500"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Last Offer Date
+                    </label>
+                    <input
+                      name="lastofferdate"
+                      defaultValue={
+                        editingEvent?.lastofferdate
+                          ? editingEvent.lastofferdate.split("T")[0]
+                          : ""
+                      }
+                      type="date"
+                      className="w-full px-4 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500/50 bg-white"
+                    />
+                  </div>
+                </>
+              )}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Event Type *
@@ -1155,8 +1248,8 @@ export default function Events() {
                         <td className="px-6 py-4">
                           <span
                             className={`inline-block px-2 py-1 rounded-md text-[10px] font-bold uppercase tracking-wider ${event.leveltype === "level2"
-                                ? "bg-purple-100 text-purple-700 border border-purple-200"
-                                : "bg-blue-100 text-blue-700 border border-blue-200"
+                              ? "bg-purple-100 text-purple-700 border border-purple-200"
+                              : "bg-blue-100 text-blue-700 border border-blue-200"
                               }`}
                           >
                             {event.leveltype || "Level 1"}
@@ -1210,11 +1303,39 @@ export default function Events() {
                         </td>
 
                         <td className="px-6 py-4">
-                          <div className="flex items-center gap-1">
-                            <IndianRupee className="h-4 w-4 text-black " />
-                            <p className="font-bold text-black">
-                              {event.registrationfee}
-                            </p>
+                          <div className="space-y-1">
+                            <div className="flex items-center gap-1">
+                              <IndianRupee className="h-4 w-4 text-black " />
+                              <p className="font-bold text-black">
+                                {event.registrationfee}
+                              </p>
+                            </div>
+                            {(event.platinumprice ||
+                              event.goldprice ||
+                              event.silverprice) && (
+                                <div className="text-[11px] space-y-0.5">
+                                  {event.platinumprice && (
+                                    <span className="inline-block px-1.5 py-0.5 mr-1 rounded bg-purple-50 text-purple-700 font-medium border border-purple-200">
+                                      P: ₹{event.platinumprice}
+                                    </span>
+                                  )}
+                                  {event.goldprice && (
+                                    <span className="inline-block px-1.5 py-0.5 mr-1 rounded bg-amber-50 text-amber-700 font-medium border border-amber-200">
+                                      G: ₹{event.goldprice}
+                                    </span>
+                                  )}
+                                  {event.silverprice && (
+                                    <span className="inline-block px-1.5 py-0.5 mr-1 rounded bg-slate-50 text-slate-700 font-medium border border-slate-200">
+                                      S: ₹{event.silverprice}
+                                    </span>
+                                  )}
+                                  {event.lastofferdate && (
+                                    <p className="text-red-500 text-[10px] mt-0.5">
+                                      Offer: {event.lastofferdate.split("T")[0]}
+                                    </p>
+                                  )}
+                                </div>
+                              )}
                           </div>
                         </td>
                         <td className="px-6 py-4">
@@ -1464,8 +1585,8 @@ export default function Events() {
                         <td className="px-6 py-4">
                           <span
                             className={`inline-block px-2 py-1 rounded-md text-[10px] font-bold uppercase tracking-wider ${event.leveltype === "level2"
-                                ? "bg-purple-100 text-purple-700 border border-purple-200"
-                                : "bg-blue-100 text-blue-700 border border-blue-200"
+                              ? "bg-purple-100 text-purple-700 border border-purple-200"
+                              : "bg-blue-100 text-blue-700 border border-blue-200"
                               }`}
                           >
                             {event.leveltype || "Level 1"}
@@ -1519,11 +1640,39 @@ export default function Events() {
                         </td>
 
                         <td className="px-6 py-4">
-                          <div className="flex items-center gap-1">
-                            <IndianRupee className="h-4 w-4 text-black " />
-                            <p className="font-bold text-black">
-                              {event.registrationfee}
-                            </p>
+                          <div className="space-y-1">
+                            <div className="flex items-center gap-1">
+                              <IndianRupee className="h-4 w-4 text-black " />
+                              <p className="font-bold text-black">
+                                {event.registrationfee}
+                              </p>
+                            </div>
+                            {(event.platinumprice ||
+                              event.goldprice ||
+                              event.silverprice) && (
+                                <div className="text-[11px] space-y-0.5">
+                                  {event.platinumprice && (
+                                    <span className="inline-block px-1.5 py-0.5 mr-1 rounded bg-purple-50 text-purple-700 font-medium border border-purple-200">
+                                      P: ₹{event.platinumprice}
+                                    </span>
+                                  )}
+                                  {event.goldprice && (
+                                    <span className="inline-block px-1.5 py-0.5 mr-1 rounded bg-amber-50 text-amber-700 font-medium border border-amber-200">
+                                      G: ₹{event.goldprice}
+                                    </span>
+                                  )}
+                                  {event.silverprice && (
+                                    <span className="inline-block px-1.5 py-0.5 mr-1 rounded bg-slate-50 text-slate-700 font-medium border border-slate-200">
+                                      S: ₹{event.silverprice}
+                                    </span>
+                                  )}
+                                  {event.lastofferdate && (
+                                    <p className="text-red-500 text-[10px] mt-0.5">
+                                      Offer: {event.lastofferdate.split("T")[0]}
+                                    </p>
+                                  )}
+                                </div>
+                              )}
                           </div>
                         </td>
                         <td className="px-6 py-4">
