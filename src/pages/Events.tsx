@@ -27,7 +27,7 @@ interface Event {
   endtime?: string;
   address: string;
   participants: number;
-  availableseats?: number;
+  occupiedseats?: number;
   registrationfee?: number;
   venuename?: string;
   city: string;
@@ -314,10 +314,10 @@ export default function Events() {
           Number(formData.get("participants")) ||
           Number(formData.get("partcipants")) ||
           0,
-        availableseats:
-          formData.get("availableseats") !== null && formData.get("availableseats") !== ""
-            ? Number(formData.get("availableseats"))
-            : Number(formData.get("participants")) || 0,
+        occupiedseats:
+          editingEvent?.occupiedseats !== undefined
+            ? Number(editingEvent.occupiedseats)
+            : 0,
         registrationfee: Number(formData.get("registrationfee")) || 0,
         platinumprice:
           levelType === "level2" && formData.get("platinumprice")
@@ -609,20 +609,13 @@ export default function Events() {
 
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Available Seats
+                      Occupied Seats
                     </label>
-                    <input
-                      name="availableseats"
-                      defaultValue={
-                        editingEvent?.availableseats !== undefined && editingEvent?.availableseats !== null
-                          ? editingEvent.availableseats
-                          : editingEvent?.participants || ""
-                      }
-                      type="number"
-                      min="0"
-                      className="w-full px-4 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-saffron-500/50"
-                      placeholder="Leave empty to match participants"
-                    />
+                    <div className="w-full px-4 py-2 border border-gray-200 rounded-xl bg-gray-50 text-gray-700 flex items-center gap-2">
+                      <Users className="w-4 h-4 text-emerald-500 shrink-0" />
+                      <span className="font-semibold">{editingEvent?.occupiedseats || 0}</span>
+                      <span className="text-xs text-gray-400">(Updated automatically on booking)</span>
+                    </div>
                   </div>
                 </>
               )}
@@ -1130,7 +1123,7 @@ export default function Events() {
                     <th className="px-6 py-4 font-medium">S.No</th>
                     <th className="px-6 py-4 font-medium">Actions</th>
                     <th className="px-6 py-4 font-medium">Participants</th>
-                    <th className="px-6 py-4 font-medium">Available Seats</th>
+                    <th className="px-6 py-4 font-medium">Occupied Seats</th>
                     <th className="px-6 py-4 font-medium min-w-[300px]">
                       Event Details
                     </th>
@@ -1237,9 +1230,7 @@ export default function Events() {
                           <div className="flex items-center gap-1.5 font-bold text-emerald-600 text-sm">
                             <Users className="w-4 h-4 text-emerald-500 shrink-0" />
                             <span>
-                              {event.availableseats !== undefined && event.availableseats !== null
-                                ? event.availableseats
-                                : event.participants || 0}
+                              {event.occupiedseats || 0}
                             </span>
                           </div>
                         </td>
@@ -1387,9 +1378,7 @@ export default function Events() {
                             <div className="text-xs flex items-center gap-1">
                               <span className="text-gray-400">Seats Left:</span>
                               <span className="font-semibold text-emerald-600">
-                                {event.availableseats !== undefined && event.availableseats !== null
-                                  ? event.availableseats
-                                  : event.participants || 0}
+                                {Math.max(0, (event.participants || 0) - (event.occupiedseats || 0))}
                               </span>
                             </div>
                           </div>
@@ -1489,7 +1478,7 @@ export default function Events() {
                     <th className="px-6 py-4 font-medium">S.No</th>
                     <th className="px-6 py-4 font-medium">Actions</th>
                     <th className="px-6 py-4 font-medium">Participants</th>
-                    <th className="px-6 py-4 font-medium">Available Seats</th>
+                    <th className="px-6 py-4 font-medium">Occupied Seats</th>
                     <th className="px-6 py-4 font-medium min-w-[300px]">
                       Event Details
                     </th>
@@ -1596,9 +1585,7 @@ export default function Events() {
                           <div className="flex items-center gap-1.5 font-bold text-emerald-600 text-sm">
                             <Users className="w-4 h-4 text-emerald-500 shrink-0" />
                             <span>
-                              {event.availableseats !== undefined && event.availableseats !== null
-                                ? event.availableseats
-                                : event.participants || 0}
+                              {event.occupiedseats || 0}
                             </span>
                           </div>
                         </td>
@@ -1746,9 +1733,7 @@ export default function Events() {
                             <div className="text-xs flex items-center gap-1">
                               <span className="text-gray-400">Seats Left:</span>
                               <span className="font-semibold text-emerald-600">
-                                {event.availableseats !== undefined && event.availableseats !== null
-                                  ? event.availableseats
-                                  : event.participants || 0}
+                                {Math.max(0, (event.participants || 0) - (event.occupiedseats || 0))}
                               </span>
                             </div>
                           </div>
