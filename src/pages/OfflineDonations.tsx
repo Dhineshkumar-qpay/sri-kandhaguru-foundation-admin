@@ -39,6 +39,7 @@ export interface OfflineDonorData {
   donortype: string;
   amount: string | number;
   type: string;
+  paymentmethod?: "upi" | "cash" | string | null;
   paymentstatus?: string;
   createdAt: string;
   updatedAt?: string;
@@ -57,6 +58,7 @@ interface DonorFormData {
   passportnumber: string;
   donortype: string;
   amount: string;
+  paymentmethod: string;
 }
 
 const INITIAL_FORM: DonorFormData = {
@@ -72,11 +74,14 @@ const INITIAL_FORM: DonorFormData = {
   passportnumber: "",
   donortype: "Domestic",
   amount: "",
+  paymentmethod: "cash",
 };
 
 const COMMON_CAUSES = [
   "Annadhanam Contribution",
   "Temple Construction & Renovation",
+  "Ghosala Contribution",
+  "Pooja Contribution",
 ];
 
 const DONOR_TYPES = [
@@ -180,6 +185,7 @@ export default function OfflineDonations() {
       passportnumber: donor.passportnumber || "",
       donortype: matchedType || donor.donortype,
       amount: donor.amount !== undefined && donor.amount !== null ? String(donor.amount) : "",
+      paymentmethod: donor.paymentmethod?.toLowerCase() === "upi" ? "upi" : "cash",
     });
     setFormError("");
     setFormSuccess("");
@@ -202,11 +208,6 @@ export default function OfflineDonations() {
 
     if (!formData.fullname.trim()) {
       setFormError("Full Name is required.");
-      return;
-    }
-
-    if (!formData.mobile.trim()) {
-      setFormError("Mobile number is required.");
       return;
     }
 
@@ -239,6 +240,7 @@ export default function OfflineDonations() {
       passportnumber: formData.passportnumber.trim() || null,
       donortype: formData.donortype,
       amount: numAmount,
+      paymentmethod: formData.paymentmethod || "cash",
       paymentstatus: "success",
     };
 
@@ -405,13 +407,43 @@ export default function OfflineDonations() {
       .reduce((sum, d) => sum + (Number(d.amount) || 0), 0);
   }, [donations]);
 
+  const templeAmount = useMemo(() => {
+    return donations
+      .filter((d) => {
+        if (d.type?.toLowerCase() !== "offline") return false;
+        const c = d.cause?.toLowerCase() || "";
+        return c.includes("temple") || c.includes("kovil");
+      })
+      .reduce((sum, d) => sum + (Number(d.amount) || 0), 0);
+  }, [donations]);
+
   const annadhanamAmount = useMemo(() => {
     return donations
-      .filter(
-        (d) =>
-          d.type?.toLowerCase() === "offline" &&
-          d.cause?.toLowerCase().includes("annadhanam"),
-      )
+      .filter((d) => {
+        if (d.type?.toLowerCase() !== "offline") return false;
+        const c = d.cause?.toLowerCase() || "";
+        return c.includes("annadhanam") || c.includes("food") || c.includes("anna");
+      })
+      .reduce((sum, d) => sum + (Number(d.amount) || 0), 0);
+  }, [donations]);
+
+  const ghosalaAmount = useMemo(() => {
+    return donations
+      .filter((d) => {
+        if (d.type?.toLowerCase() !== "offline") return false;
+        const c = d.cause?.toLowerCase() || "";
+        return c.includes("ghosala") || c.includes("gosala") || c.includes("cow");
+      })
+      .reduce((sum, d) => sum + (Number(d.amount) || 0), 0);
+  }, [donations]);
+
+  const poojaAmount = useMemo(() => {
+    return donations
+      .filter((d) => {
+        if (d.type?.toLowerCase() !== "offline") return false;
+        const c = d.cause?.toLowerCase() || "";
+        return c.includes("pooja") || c.includes("puja");
+      })
       .reduce((sum, d) => sum + (Number(d.amount) || 0), 0);
   }, [donations]);
 
@@ -573,11 +605,10 @@ export default function OfflineDonations() {
               {/* Mobile */}
               <div>
                 <label className="block text-xs font-semibold text-gray-700 mb-1.5">
-                  Mobile Number <span className="text-red-500">*</span>
+                  Mobile Number
                 </label>
                 <input
                   type="tel"
-                  required
                   placeholder="9876543210"
                   value={formData.mobile}
                   onChange={(e) =>
@@ -623,24 +654,24 @@ export default function OfflineDonations() {
                 </select>
               </div>
 
-              {/* Custom Cause if "Other" */}
-              {formData.cause === "Other" && (
-                <div>
-                  <label className="block text-xs font-semibold text-gray-700 mb-1.5">
-                    Specific Cause <span className="text-red-500">*</span>
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    placeholder="Enter cause name"
-                    value={formData.customCause}
-                    onChange={(e) =>
-                      setFormData({ ...formData, customCause: e.target.value })
-                    }
-                    className="w-full px-3.5 py-2.5 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-saffron-500/50 text-sm bg-white"
-                  />
-                </div>
-              )}
+              {/* Payment Method */}
+              <div>
+                <label className="block text-xs font-semibold text-gray-700 mb-1.5">
+                  Payment Method <span className="text-red-500">*</span>
+                </label>
+                <select
+                  value={formData.paymentmethod}
+                  onChange={(e) =>
+                    setFormData({ ...formData, paymentmethod: e.target.value })
+                  }
+                  className="w-full px-3.5 py-2.5 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-saffron-500/50 text-sm bg-white"
+                >
+                  <option value="cash">Cash</option>
+                  <option value="upi">UPI</option>
+                </select>
+              </div>
+
+
 
               {/* Donor Type */}
               <div>
@@ -775,21 +806,22 @@ export default function OfflineDonations() {
       ) : (
         <>
           {/* Summary KPI Cards */}
+          {/* Summary KPI Cards */}
+          {/* Summary KPI Cards */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             <div className="bg-white p-5 rounded-2xl border border-saffron-100/60 shadow-sm flex items-center gap-4">
-              <div className="w-12 h-12 rounded-xl bg-orange-50 text-orange-600 flex items-center justify-center shrink-0">
-                <HandHeart className="w-6 h-6" />
+              <div className="w-12 h-12 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0">
+                <IndianRupee className="w-6 h-6" />
               </div>
               <div>
                 <p className="text-xs font-semibold uppercase tracking-wider text-gray-500">
-                  Total Offline Donors
+                  Total Donars
                 </p>
                 <p className="text-2xl font-bold text-gray-800 mt-0.5">
                   {donations.length}
                 </p>
               </div>
             </div>
-
             <div className="bg-white p-5 rounded-2xl border border-saffron-100/60 shadow-sm flex items-center gap-4">
               <div className="w-12 h-12 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0">
                 <IndianRupee className="w-6 h-6" />
@@ -800,6 +832,20 @@ export default function OfflineDonations() {
                 </p>
                 <p className="text-2xl font-bold text-gray-800 mt-0.5">
                   ₹{totalAmount.toLocaleString("en-IN")}
+                </p>
+              </div>
+            </div>
+
+            <div className="bg-white p-5 rounded-2xl border border-saffron-100/60 shadow-sm flex items-center gap-4">
+              <div className="w-12 h-12 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center shrink-0">
+                <Building className="w-6 h-6" />
+              </div>
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-wider text-gray-500">
+                  Temple Fund
+                </p>
+                <p className="text-2xl font-bold text-gray-800 mt-0.5">
+                  ₹{templeAmount.toLocaleString("en-IN")}
                 </p>
               </div>
             </div>
@@ -819,15 +865,29 @@ export default function OfflineDonations() {
             </div>
 
             <div className="bg-white p-5 rounded-2xl border border-saffron-100/60 shadow-sm flex items-center gap-4">
-              <div className="w-12 h-12 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center shrink-0">
-                <Building className="w-6 h-6" />
+              <div className="w-12 h-12 rounded-xl bg-orange-50 text-orange-600 flex items-center justify-center shrink-0">
+                <HandHeart className="w-6 h-6" />
               </div>
               <div>
                 <p className="text-xs font-semibold uppercase tracking-wider text-gray-500">
-                  Filtered Records
+                  Ghosala Fund
                 </p>
                 <p className="text-2xl font-bold text-gray-800 mt-0.5">
-                  {filteredDonations.length}
+                  ₹{ghosalaAmount.toLocaleString("en-IN")}
+                </p>
+              </div>
+            </div>
+
+            <div className="bg-white p-5 rounded-2xl border border-saffron-100/60 shadow-sm flex items-center gap-4">
+              <div className="w-12 h-12 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center shrink-0">
+                <HandHeart className="w-6 h-6" />
+              </div>
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-wider text-gray-500">
+                  Pooja Fund
+                </p>
+                <p className="text-2xl font-bold text-gray-800 mt-0.5">
+                  ₹{poojaAmount.toLocaleString("en-IN")}
                 </p>
               </div>
             </div>
@@ -860,8 +920,8 @@ export default function OfflineDonations() {
                   <option value="">All Causes</option>
                   <option value="Annadhanam Contribution">Annadhanam Contribution</option>
                   <option value="Temple Construction & Renovation">Temple Construction</option>
-                  <option value="Goshala Maintenance">Goshala Maintenance</option>
-                  <option value="Puja & Archana Seva">Puja & Archana</option>
+                  <option value="Ghosala Contribution">Ghosala Contribution</option>
+                  <option value="Pooja Contribution">Pooja Contribution</option>
                 </select>
 
                 <select
@@ -1049,9 +1109,16 @@ export default function OfflineDonations() {
                             <IndianRupee className="w-3.5 h-3.5 mr-0.5 text-saffron-600" />
                             {Number(donor.amount).toLocaleString("en-IN")}
                           </div>
-                          <span className="inline-block mt-1 px-2 py-0.5 bg-emerald-100 text-emerald-700 text-[10px] font-semibold uppercase tracking-wider rounded">
-                            {donor.paymentstatus || "Offline"}
-                          </span>
+                          <div className="flex items-center gap-1 mt-1">
+                            <span className="inline-block px-2 py-0.5 bg-emerald-100 text-emerald-700 text-[10px] font-semibold uppercase tracking-wider rounded">
+                              {donor.paymentstatus || "Offline"}
+                            </span>
+                            {donor.paymentmethod && (
+                              <span className="inline-block px-2 py-0.5 bg-gray-100 text-gray-700 text-[10px] font-semibold uppercase tracking-wider rounded">
+                                {donor.paymentmethod}
+                              </span>
+                            )}
+                          </div>
                         </td>
 
                         <td className="px-5 py-4 text-xs text-gray-500 whitespace-nowrap">
@@ -1207,6 +1274,14 @@ export default function OfflineDonations() {
                           Offline
                         </span>
                       </div>
+                      {selectedDonation.paymentmethod && (
+                        <div className="flex justify-between items-center">
+                          <span className="text-gray-600">Payment Method</span>
+                          <span className="inline-block px-2 py-0.5 rounded text-xs font-semibold uppercase tracking-wider bg-gray-100 text-gray-700">
+                            {selectedDonation.paymentmethod}
+                          </span>
+                        </div>
+                      )}
                       <div className="flex justify-between items-center">
                         <span className="text-gray-600">Date</span>
                         <span className="font-semibold text-gray-800">

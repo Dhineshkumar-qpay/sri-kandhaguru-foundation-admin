@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { BASEURL } from "../services/api";
 import {
   Search,
@@ -15,6 +15,8 @@ import {
   Phone,
   AlertCircle,
   CheckCircle2,
+  HandHeart,
+  Building,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import api from "../services/api";
@@ -77,6 +79,8 @@ const INITIAL_FORM: DonorFormData = {
 const COMMON_CAUSES = [
   "Annadhanam Contribution",
   "Temple Construction & Renovation",
+  "Ghosala Contribution",
+  "Pooja Contribution",
 ];
 
 const DONOR_TYPES = [
@@ -365,6 +369,53 @@ export default function Donations() {
     currentPage * itemsPerPage,
   );
 
+  // Statistics - Strictly online
+  const totalAmount = useMemo(() => {
+    return donations
+      .filter((d) => !d.type || d.type.toLowerCase() !== "offline")
+      .reduce((sum, d) => sum + (Number(d.amount) || 0), 0);
+  }, [donations]);
+
+  const templeAmount = useMemo(() => {
+    return donations
+      .filter((d) => {
+        if (d.type && d.type.toLowerCase() === "offline") return false;
+        const c = d.cause?.toLowerCase() || "";
+        return c.includes("temple") || c.includes("kovil");
+      })
+      .reduce((sum, d) => sum + (Number(d.amount) || 0), 0);
+  }, [donations]);
+
+  const annadhanamAmount = useMemo(() => {
+    return donations
+      .filter((d) => {
+        if (d.type && d.type.toLowerCase() === "offline") return false;
+        const c = d.cause?.toLowerCase() || "";
+        return c.includes("annadhanam") || c.includes("food") || c.includes("anna");
+      })
+      .reduce((sum, d) => sum + (Number(d.amount) || 0), 0);
+  }, [donations]);
+
+  const ghosalaAmount = useMemo(() => {
+    return donations
+      .filter((d) => {
+        if (d.type && d.type.toLowerCase() === "offline") return false;
+        const c = d.cause?.toLowerCase() || "";
+        return c.includes("ghosala") || c.includes("gosala") || c.includes("cow");
+      })
+      .reduce((sum, d) => sum + (Number(d.amount) || 0), 0);
+  }, [donations]);
+
+  const poojaAmount = useMemo(() => {
+    return donations
+      .filter((d) => {
+        if (d.type && d.type.toLowerCase() === "offline") return false;
+        const c = d.cause?.toLowerCase() || "";
+        return c.includes("pooja") || c.includes("puja");
+      })
+      .reduce((sum, d) => sum + (Number(d.amount) || 0), 0);
+  }, [donations]);
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
@@ -469,11 +520,10 @@ export default function Donations() {
               {/* Mobile */}
               <div>
                 <label className="block text-xs font-semibold text-gray-700 mb-1.5">
-                  Mobile Number <span className="text-red-500">*</span>
+                  Mobile Number
                 </label>
                 <input
                   type="tel"
-                  required
                   placeholder="9876543210"
                   value={formData.mobile}
                   onChange={(e) =>
@@ -518,25 +568,6 @@ export default function Donations() {
                   ))}
                 </select>
               </div>
-
-              {/* Custom Cause if "Other" */}
-              {formData.cause === "Other" && (
-                <div>
-                  <label className="block text-xs font-semibold text-gray-700 mb-1.5">
-                    Specific Cause <span className="text-red-500">*</span>
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    placeholder="Enter cause name"
-                    value={formData.customCause}
-                    onChange={(e) =>
-                      setFormData({ ...formData, customCause: e.target.value })
-                    }
-                    className="w-full px-3.5 py-2.5 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-saffron-500/50 text-sm bg-white"
-                  />
-                </div>
-              )}
 
               {/* Donor Type */}
               <div>
@@ -687,300 +718,391 @@ export default function Donations() {
           </form>
         </motion.div>
       ) : (
-        <div className="bg-white rounded-2xl shadow-elegant border border-saffron-50/50 overflow-hidden">
-          <div className="p-4 border-b border-gray-100 flex flex-col md:flex-row flex-wrap justify-between items-center gap-4 bg-gray-50/50">
-            <div className="relative w-full md:max-w-xs">
-              <Search className="w-5 h-5 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-              <input
-                type="text"
-                placeholder="Search by name, email, mobile or cause..."
-                value={searchTerm}
-                onChange={(e) => {
-                  setSearchTerm(e.target.value);
-                  setCurrentPage(1);
-                }}
-                className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-saffron-500/50 transition-all text-sm bg-white"
-              />
+        <>
+          {/* Summary KPI Cards */}
+          {/* Summary KPI Cards */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="bg-white p-5 rounded-2xl border border-saffron-100/60 shadow-sm flex items-center gap-4">
+              <div className="w-12 h-12 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0">
+                <IndianRupee className="w-6 h-6" />
+              </div>
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-wider text-gray-500">
+                  Total Donars
+                </p>
+                <p className="text-2xl font-bold text-gray-800 mt-0.5">
+                  {donations.length}
+                </p>
+              </div>
             </div>
-            <div className="flex flex-col sm:flex-row flex-wrap gap-2 w-full md:w-auto">
-              <select
-                value={cause}
-                onChange={(e) => setCause(e.target.value)}
-                className="w-full sm:w-auto px-3 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-saffron-500/50 text-xs sm:text-sm bg-white"
-              >
-                <option value="">All Causes</option>
-                <option value="Annadhanam Contribution">Annadhanam Contribution</option>
-                <option value="Temple Construction & Renovation">Temple Construction</option>
-              </select>
-              <select
-                value={donorType}
-                onChange={(e) => setDonorType(e.target.value)}
-                className="w-full sm:w-auto px-3 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-saffron-500/50 text-xs sm:text-sm bg-white"
-              >
-                <option value="">All Types</option>
-                <option value="domestic">Domestic</option>
-                <option value="international">International</option>
-              </select>
-              <select
-                value={paymentStatus}
-                onChange={(e) => setPaymentStatus(e.target.value)}
-                className="w-full sm:w-auto px-3 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-saffron-500/50 text-xs sm:text-sm bg-white"
-              >
-                <option value="">All Statuses</option>
-                <option value="success">Success</option>
-                <option value="completed">Completed</option>
-                <option value="pending">Pending</option>
-                <option value="failed">Failed</option>
-              </select>
-              <input
-                type="date"
-                value={startDate}
-                onChange={(e) => setStartDate(e.target.value)}
-                className="w-full sm:w-auto px-3 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-saffron-500/50 text-xs sm:text-sm bg-white"
-                title="Start Date"
-              />
-              <input
-                type="date"
-                value={endDate}
-                onChange={(e) => setEndDate(e.target.value)}
-                className="w-full sm:w-auto px-3 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-saffron-500/50 text-xs sm:text-sm bg-white"
-                title="End Date"
-              />
-              <button
-                onClick={fetchDonations}
-                className="w-full sm:w-auto px-5 py-2 bg-saffron-500 text-white rounded-xl hover:bg-saffron-600 font-medium transition-colors shadow-sm text-xs sm:text-sm cursor-pointer"
-              >
-                Fetch
-              </button>
+            <div className="bg-white p-5 rounded-2xl border border-saffron-100/60 shadow-sm flex items-center gap-4">
+              <div className="w-12 h-12 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0">
+                <IndianRupee className="w-6 h-6" />
+              </div>
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-wider text-gray-500">
+                  Total Collections
+                </p>
+                <p className="text-2xl font-bold text-gray-800 mt-0.5">
+                  ₹{totalAmount.toLocaleString("en-IN")}
+                </p>
+              </div>
+            </div>
+
+            <div className="bg-white p-5 rounded-2xl border border-saffron-100/60 shadow-sm flex items-center gap-4">
+              <div className="w-12 h-12 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center shrink-0">
+                <Building className="w-6 h-6" />
+              </div>
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-wider text-gray-500">
+                  Temple Fund
+                </p>
+                <p className="text-2xl font-bold text-gray-800 mt-0.5">
+                  ₹{templeAmount.toLocaleString("en-IN")}
+                </p>
+              </div>
+            </div>
+
+            <div className="bg-white p-5 rounded-2xl border border-saffron-100/60 shadow-sm flex items-center gap-4">
+              <div className="w-12 h-12 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center shrink-0">
+                <HandHeart className="w-6 h-6" />
+              </div>
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-wider text-gray-500">
+                  Annadhanam Fund
+                </p>
+                <p className="text-2xl font-bold text-gray-800 mt-0.5">
+                  ₹{annadhanamAmount.toLocaleString("en-IN")}
+                </p>
+              </div>
+            </div>
+
+            <div className="bg-white p-5 rounded-2xl border border-saffron-100/60 shadow-sm flex items-center gap-4">
+              <div className="w-12 h-12 rounded-xl bg-orange-50 text-orange-600 flex items-center justify-center shrink-0">
+                <HandHeart className="w-6 h-6" />
+              </div>
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-wider text-gray-500">
+                  Ghosala Fund
+                </p>
+                <p className="text-2xl font-bold text-gray-800 mt-0.5">
+                  ₹{ghosalaAmount.toLocaleString("en-IN")}
+                </p>
+              </div>
+            </div>
+
+            <div className="bg-white p-5 rounded-2xl border border-saffron-100/60 shadow-sm flex items-center gap-4">
+              <div className="w-12 h-12 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center shrink-0">
+                <HandHeart className="w-6 h-6" />
+              </div>
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-wider text-gray-500">
+                  Pooja Fund
+                </p>
+                <p className="text-2xl font-bold text-gray-800 mt-0.5">
+                  ₹{poojaAmount.toLocaleString("en-IN")}
+                </p>
+              </div>
             </div>
           </div>
 
-          <div className="overflow-x-auto relative min-h-[300px]">
-            {loading && (
-              <div className="absolute inset-0 bg-white/60 backdrop-blur-sm z-10 flex items-center justify-center">
-                <div className="w-8 h-8 border-4 border-saffron-500 border-t-transparent rounded-full animate-spin"></div>
+          <div className="bg-white rounded-2xl shadow-elegant border border-saffron-50/50 overflow-hidden">
+            <div className="p-4 border-b border-gray-100 flex flex-col md:flex-row flex-wrap justify-between items-center gap-4 bg-gray-50/50">
+              <div className="relative w-full md:max-w-xs">
+                <Search className="w-5 h-5 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                <input
+                  type="text"
+                  placeholder="Search by name, email, mobile or cause..."
+                  value={searchTerm}
+                  onChange={(e) => {
+                    setSearchTerm(e.target.value);
+                    setCurrentPage(1);
+                  }}
+                  className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-saffron-500/50 transition-all text-sm bg-white"
+                />
               </div>
-            )}
-            <table className="w-full text-left border-collapse">
-              <thead>
-                <tr className="bg-gray-50/50 border-b border-gray-100 text-gray-500 text-sm">
-                  <th className="px-6 py-4 font-medium">S.No</th>
-                  <th className="px-6 py-4 font-medium text-right">Actions</th>
-                  <th className="px-6 py-4 font-medium">Donor Details</th>
-                  <th className="px-6 py-4 font-medium">Cause & Type</th>
-                  <th className="px-6 py-4 font-medium">IDs (PAN/Aadhaar)</th>
-                  <th className="px-6 py-4 font-medium">Amount & Status</th>
-                  <th className="px-6 py-4 font-medium">Date</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-100">
-                {currentDonations.length === 0 && !loading ? (
-                  <tr>
-                    <td
-                      colSpan={7}
-                      className="px-6 py-8 text-center text-gray-500"
-                    >
-                      No donations found.
-                    </td>
+              <div className="flex flex-col sm:flex-row flex-wrap gap-2 w-full md:w-auto">
+                <select
+                  value={cause}
+                  onChange={(e) => setCause(e.target.value)}
+                  className="w-full sm:w-auto px-3 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-saffron-500/50 text-xs sm:text-sm bg-white"
+                >
+                  <option value="">All Causes</option>
+                  <option value="Annadhanam Contribution">Annadhanam Contribution</option>
+                  <option value="Temple Construction & Renovation">Temple Construction</option>
+                  <option value="Ghosala Contribution">Ghosala Contribution</option>
+                  <option value="Pooja Contribution">Pooja Contribution</option>
+                </select>
+                <select
+                  value={donorType}
+                  onChange={(e) => setDonorType(e.target.value)}
+                  className="w-full sm:w-auto px-3 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-saffron-500/50 text-xs sm:text-sm bg-white"
+                >
+                  <option value="">All Types</option>
+                  <option value="domestic">Domestic</option>
+                  <option value="international">International</option>
+                </select>
+                <select
+                  value={paymentStatus}
+                  onChange={(e) => setPaymentStatus(e.target.value)}
+                  className="w-full sm:w-auto px-3 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-saffron-500/50 text-xs sm:text-sm bg-white"
+                >
+                  <option value="">All Statuses</option>
+                  <option value="success">Success</option>
+                  <option value="completed">Completed</option>
+                  <option value="pending">Pending</option>
+                  <option value="failed">Failed</option>
+                </select>
+                <input
+                  type="date"
+                  value={startDate}
+                  onChange={(e) => setStartDate(e.target.value)}
+                  className="w-full sm:w-auto px-3 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-saffron-500/50 text-xs sm:text-sm bg-white"
+                  title="Start Date"
+                />
+                <input
+                  type="date"
+                  value={endDate}
+                  onChange={(e) => setEndDate(e.target.value)}
+                  className="w-full sm:w-auto px-3 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-saffron-500/50 text-xs sm:text-sm bg-white"
+                  title="End Date"
+                />
+                <button
+                  onClick={fetchDonations}
+                  className="w-full sm:w-auto px-5 py-2 bg-saffron-500 text-white rounded-xl hover:bg-saffron-600 font-medium transition-colors shadow-sm text-xs sm:text-sm cursor-pointer"
+                >
+                  Fetch
+                </button>
+              </div>
+            </div>
+
+            <div className="overflow-x-auto relative min-h-[300px]">
+              {loading && (
+                <div className="absolute inset-0 bg-white/60 backdrop-blur-sm z-10 flex items-center justify-center">
+                  <div className="w-8 h-8 border-4 border-saffron-500 border-t-transparent rounded-full animate-spin"></div>
+                </div>
+              )}
+              <table className="w-full text-left border-collapse">
+                <thead>
+                  <tr className="bg-gray-50/50 border-b border-gray-100 text-gray-500 text-sm">
+                    <th className="px-6 py-4 font-medium">S.No</th>
+                    <th className="px-6 py-4 font-medium text-right">Actions</th>
+                    <th className="px-6 py-4 font-medium">Donor Details</th>
+                    <th className="px-6 py-4 font-medium">Cause & Type</th>
+                    <th className="px-6 py-4 font-medium">IDs (PAN/Aadhaar)</th>
+                    <th className="px-6 py-4 font-medium">Amount & Status</th>
+                    <th className="px-6 py-4 font-medium">Date</th>
                   </tr>
-                ) : (
-                  currentDonations.map((item, index) => (
-                    <tr
-                      key={item.id}
-                      className="hover:bg-saffron-50/30 transition-colors group"
-                    >
-                      <td className="px-6 py-4">
-                        <h1 className="flex h-9 w-9 items-center justify-center rounded-full bg-orange-100 text-sm font-bold text-orange-600 ring-orange-200">
-                          {(currentPage - 1) * itemsPerPage + index + 1}
-                        </h1>
-                      </td>
-                      <td className="px-6 py-4 text-right">
-                        <div className="flex items-center justify-end gap-1">
-                          <button
-                            onClick={() => {
-                              setSelectedDonation(item);
-                              setIsSidebarOpen(true);
-                            }}
-                            className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg cursor-pointer transition-colors"
-                            title="View Details"
-                          >
-                            <Eye className="w-4 h-4" />
-                          </button>
-                          <button
-                            onClick={() => openEditForm(item)}
-                            className="p-1.5 text-gray-400 hover:text-amber-600 hover:bg-amber-50 rounded-lg cursor-pointer transition-colors"
-                            title="Edit Donation"
-                          >
-                            <Edit2 className="w-4 h-4" />
-                          </button>
-                          <button
-                            onClick={() => void handleDelete(item)}
-                            disabled={isDeleting && deletingId === item.id}
-                            className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg cursor-pointer transition-colors disabled:opacity-40"
-                            title="Delete Donation"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4">
-                        <div className="flex flex-col">
-                          <span className="font-semibold text-gray-800">
-                            {item.fullname}
-                          </span>
-                          <span className="text-xs text-gray-500">
-                            {item.email}
-                          </span>
-                          <span className="text-xs text-gray-500">
-                            {item.mobile}
-                          </span>
-                          <span
-                            className="text-xs text-gray-400 mt-1 truncate max-w-[200px]"
-                            title={item.address || ""}
-                          >
-                            {item.address}, {item.country}
-                          </span>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4">
-                        <div className="flex flex-col gap-1">
-                          <span className="bg-blue-50 text-blue-600 px-3 py-1 rounded-full font-medium text-xs w-fit">
-                            {item.cause}
-                          </span>
-                          <span className="text-xs text-gray-500 capitalize">
-                            {item.donortype}
-                          </span>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 text-sm">
-                        <div className="flex flex-col text-gray-600 space-y-1 text-xs">
-                          {item.pannumber && (
-                            <span title="PAN">
-                              <span className="font-semibold">PAN:</span>{" "}
-                              {item.pannumber}
-                            </span>
-                          )}
-                          {item.aadhaarnumber && (
-                            <span title="Aadhaar">
-                              <span className="font-semibold">AADHAAR:</span>{" "}
-                              {item.aadhaarnumber}
-                            </span>
-                          )}
-                          {item.passportnumber && (
-                            <span title="Passport">
-                              <span className="font-semibold">PASSPORT:</span>{" "}
-                              {item.passportnumber}
-                            </span>
-                          )}
-                          {!item.pannumber &&
-                            !item.aadhaarnumber &&
-                            !item.passportnumber && (
-                              <span className="text-gray-400 italic">
-                                Not Provided
-                              </span>
-                            )}
-                        </div>
-                      </td>
-                      <td className="px-6 py-4">
-                        <div className="flex flex-col gap-1">
-                          <div className="flex items-center font-bold text-gray-800">
-                            <IndianRupee className="w-4 h-4 mr-0.5" />
-                            {item.amount}
-                          </div>
-                          <span
-                            className={`px-2 py-0.5 rounded-md text-[10px] font-medium w-fit uppercase tracking-wider ${item.paymentstatus === "completed" ||
-                              item.paymentstatus === "success"
-                              ? "bg-green-100 text-green-700"
-                              : item.paymentstatus === "failed"
-                                ? "bg-red-100 text-red-700"
-                                : "bg-yellow-100 text-yellow-700"
-                              }`}
-                          >
-                            {item.paymentstatus}
-                          </span>
-                          {item.screenshot && (
-                            <a
-                              href={
-                                item.screenshot.startsWith("http")
-                                  ? item.screenshot
-                                  : `${BASEURL}${item.screenshot}`
-                              }
-                              target="_blank"
-                              rel="noreferrer"
-                              className="text-xs text-saffron-600 hover:underline flex items-center mt-1"
-                            >
-                              <FileText className="w-3 h-3 mr-1" /> Receipt
-                            </a>
-                          )}
-                        </div>
-                      </td>
-                      <td className="px-6 py-4">
-                        <div className="flex items-center gap-2 text-sm text-gray-600">
-                          <Calendar className="w-4 h-4 text-saffron-500 shrink-0" />
-                          <span className="whitespace-nowrap">
-                            {item.createdAt
-                              ? new Date(item.createdAt).toLocaleDateString(
-                                "en-US",
-                                {
-                                  month: "short",
-                                  day: "numeric",
-                                  year: "numeric",
-                                },
-                              )
-                              : "N/A"}
-                          </span>
-                        </div>
+                </thead>
+                <tbody className="divide-y divide-gray-100">
+                  {currentDonations.length === 0 && !loading ? (
+                    <tr>
+                      <td
+                        colSpan={7}
+                        className="px-6 py-8 text-center text-gray-500"
+                      >
+                        No donations found.
                       </td>
                     </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
-
-          {/* Pagination */}
-          {totalPages > 0 && (
-            <div className="p-4 border-t border-gray-100 flex flex-col sm:flex-row items-center justify-between gap-4 text-sm text-gray-500 bg-gray-50/50">
-              <p>
-                Showing {(currentPage - 1) * itemsPerPage + 1} to{" "}
-                {Math.min(currentPage * itemsPerPage, filteredDonations.length)} of{" "}
-                {filteredDonations.length} entries
-              </p>
-              <div className="flex gap-1 overflow-x-auto">
-                <button
-                  onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-                  disabled={currentPage === 1}
-                  className="px-3 py-1 border border-gray-200 rounded-md hover:bg-gray-100 disabled:opacity-50 disabled:hover:bg-transparent transition-colors cursor-pointer"
-                >
-                  Prev
-                </button>
-
-                {Array.from({ length: totalPages }, (_, i) => i + 1).map(
-                  (pageNum) => (
-                    <button
-                      key={pageNum}
-                      onClick={() => setCurrentPage(pageNum)}
-                      className={`px-3 py-1 rounded-md transition-colors cursor-pointer ${pageNum === currentPage
-                        ? "bg-saffron-500 text-white shadow-sm"
-                        : "border border-gray-200 hover:bg-gray-100"
-                        }`}
-                    >
-                      {pageNum}
-                    </button>
-                  ),
-                )}
-
-                <button
-                  onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-                  disabled={currentPage === totalPages}
-                  className="px-3 py-1 border border-gray-200 rounded-md hover:bg-gray-100 disabled:opacity-50 disabled:hover:bg-transparent transition-colors cursor-pointer"
-                >
-                  Next
-                </button>
-              </div>
+                  ) : (
+                    currentDonations.map((item, index) => (
+                      <tr
+                        key={item.id}
+                        className="hover:bg-saffron-50/30 transition-colors group"
+                      >
+                        <td className="px-6 py-4">
+                          <h1 className="flex h-9 w-9 items-center justify-center rounded-full bg-orange-100 text-sm font-bold text-orange-600 ring-orange-200">
+                            {(currentPage - 1) * itemsPerPage + index + 1}
+                          </h1>
+                        </td>
+                        <td className="px-6 py-4 text-right">
+                          <div className="flex items-center justify-end gap-1">
+                            <button
+                              onClick={() => {
+                                setSelectedDonation(item);
+                                setIsSidebarOpen(true);
+                              }}
+                              className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg cursor-pointer transition-colors"
+                              title="View Details"
+                            >
+                              <Eye className="w-4 h-4" />
+                            </button>
+                            <button
+                              onClick={() => openEditForm(item)}
+                              className="p-1.5 text-gray-400 hover:text-amber-600 hover:bg-amber-50 rounded-lg cursor-pointer transition-colors"
+                              title="Edit Donation"
+                            >
+                              <Edit2 className="w-4 h-4" />
+                            </button>
+                            <button
+                              onClick={() => void handleDelete(item)}
+                              disabled={isDeleting && deletingId === item.id}
+                              className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg cursor-pointer transition-colors disabled:opacity-40"
+                              title="Delete Donation"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </div>
+                        </td>
+                        <td className="px-6 py-4">
+                          <div className="flex flex-col">
+                            <span className="font-semibold text-gray-800">
+                              {item.fullname}
+                            </span>
+                            <span className="text-xs text-gray-500">
+                              {item.email}
+                            </span>
+                            <span className="text-xs text-gray-500">
+                              {item.mobile}
+                            </span>
+                            <span
+                              className="text-xs text-gray-400 mt-1 truncate max-w-[200px]"
+                              title={item.address || ""}
+                            >
+                              {item.address}, {item.country}
+                            </span>
+                          </div>
+                        </td>
+                        <td className="px-6 py-4">
+                          <div className="flex flex-col gap-1">
+                            <span className="bg-blue-50 text-blue-600 px-3 py-1 rounded-full font-medium text-xs w-fit">
+                              {item.cause}
+                            </span>
+                            <span className="text-xs text-gray-500 capitalize">
+                              {item.donortype}
+                            </span>
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 text-sm">
+                          <div className="flex flex-col text-gray-600 space-y-1 text-xs">
+                            {item.pannumber && (
+                              <span title="PAN">
+                                <span className="font-semibold">PAN:</span>{" "}
+                                {item.pannumber}
+                              </span>
+                            )}
+                            {item.aadhaarnumber && (
+                              <span title="Aadhaar">
+                                <span className="font-semibold">AADHAAR:</span>{" "}
+                                {item.aadhaarnumber}
+                              </span>
+                            )}
+                            {item.passportnumber && (
+                              <span title="Passport">
+                                <span className="font-semibold">PASSPORT:</span>{" "}
+                                {item.passportnumber}
+                              </span>
+                            )}
+                            {!item.pannumber &&
+                              !item.aadhaarnumber &&
+                              !item.passportnumber && (
+                                <span className="text-gray-400 italic">
+                                  Not Provided
+                                </span>
+                              )}
+                          </div>
+                        </td>
+                        <td className="px-6 py-4">
+                          <div className="flex flex-col gap-1">
+                            <div className="flex items-center font-bold text-gray-800">
+                              <IndianRupee className="w-4 h-4 mr-0.5" />
+                              {item.amount}
+                            </div>
+                            <span
+                              className={`px-2 py-0.5 rounded-md text-[10px] font-medium w-fit uppercase tracking-wider ${item.paymentstatus === "completed" ||
+                                item.paymentstatus === "success"
+                                ? "bg-green-100 text-green-700"
+                                : item.paymentstatus === "failed"
+                                  ? "bg-red-100 text-red-700"
+                                  : "bg-yellow-100 text-yellow-700"
+                                }`}
+                            >
+                              {item.paymentstatus}
+                            </span>
+                            {item.screenshot && (
+                              <a
+                                href={
+                                  item.screenshot.startsWith("http")
+                                    ? item.screenshot
+                                    : `${BASEURL}${item.screenshot}`
+                                }
+                                target="_blank"
+                                rel="noreferrer"
+                                className="text-xs text-saffron-600 hover:underline flex items-center mt-1"
+                              >
+                                <FileText className="w-3 h-3 mr-1" /> Receipt
+                              </a>
+                            )}
+                          </div>
+                        </td>
+                        <td className="px-6 py-4">
+                          <div className="flex items-center gap-2 text-sm text-gray-600">
+                            <Calendar className="w-4 h-4 text-saffron-500 shrink-0" />
+                            <span className="whitespace-nowrap">
+                              {item.createdAt
+                                ? new Date(item.createdAt).toLocaleDateString(
+                                  "en-US",
+                                  {
+                                    month: "short",
+                                    day: "numeric",
+                                    year: "numeric",
+                                  },
+                                )
+                                : "N/A"}
+                            </span>
+                          </div>
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
             </div>
-          )}
-        </div>
+
+            {/* Pagination */}
+            {totalPages > 0 && (
+              <div className="p-4 border-t border-gray-100 flex flex-col sm:flex-row items-center justify-between gap-4 text-sm text-gray-500 bg-gray-50/50">
+                <p>
+                  Showing {(currentPage - 1) * itemsPerPage + 1} to{" "}
+                  {Math.min(currentPage * itemsPerPage, filteredDonations.length)} of{" "}
+                  {filteredDonations.length} entries
+                </p>
+                <div className="flex gap-1 overflow-x-auto">
+                  <button
+                    onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                    disabled={currentPage === 1}
+                    className="px-3 py-1 border border-gray-200 rounded-md hover:bg-gray-100 disabled:opacity-50 disabled:hover:bg-transparent transition-colors cursor-pointer"
+                  >
+                    Prev
+                  </button>
+
+                  {Array.from({ length: totalPages }, (_, i) => i + 1).map(
+                    (pageNum) => (
+                      <button
+                        key={pageNum}
+                        onClick={() => setCurrentPage(pageNum)}
+                        className={`px-3 py-1 rounded-md transition-colors cursor-pointer ${pageNum === currentPage
+                          ? "bg-saffron-500 text-white shadow-sm"
+                          : "border border-gray-200 hover:bg-gray-100"
+                          }`}
+                      >
+                        {pageNum}
+                      </button>
+                    ),
+                  )}
+
+                  <button
+                    onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                    disabled={currentPage === totalPages}
+                    className="px-3 py-1 border border-gray-200 rounded-md hover:bg-gray-100 disabled:opacity-50 disabled:hover:bg-transparent transition-colors cursor-pointer"
+                  >
+                    Next
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        </>
       )}
 
       {/* Right Sidebar for Donation Details */}
