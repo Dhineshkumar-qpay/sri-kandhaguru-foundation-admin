@@ -27,6 +27,7 @@ interface Event {
   endtime?: string;
   address: string;
   participants: number;
+  availableseats?: number;
   registrationfee?: number;
   venuename?: string;
   city: string;
@@ -97,7 +98,8 @@ export default function Events() {
 
   const handleUpdateParticipants = async (id: number) => {
     const newParticipants = pendingParticipants[id];
-    if (!newParticipants) return;
+    if (newParticipants === undefined) return;
+
     setUpdatingParticipantsId(id);
     try {
       const response = await api.post("/event/update-participants", {
@@ -106,10 +108,14 @@ export default function Events() {
       });
       if (response.data?.success || response.status === 200 || response.status === 201) {
         setLevel1Events(
-          level1Events.map((ev) => (ev.id === id ? { ...ev, participants: Number(newParticipants) } : ev))
+          level1Events.map((ev) =>
+            ev.id === id ? { ...ev, participants: Number(newParticipants) } : ev,
+          ),
         );
         setLevel2Events(
-          level2Events.map((ev) => (ev.id === id ? { ...ev, participants: Number(newParticipants) } : ev))
+          level2Events.map((ev) =>
+            ev.id === id ? { ...ev, participants: Number(newParticipants) } : ev,
+          ),
         );
         setPendingParticipants((prev) => {
           const next = { ...prev };
@@ -308,6 +314,10 @@ export default function Events() {
           Number(formData.get("participants")) ||
           Number(formData.get("partcipants")) ||
           0,
+        availableseats:
+          formData.get("availableseats") !== null && formData.get("availableseats") !== ""
+            ? Number(formData.get("availableseats"))
+            : Number(formData.get("participants")) || 0,
         registrationfee: Number(formData.get("registrationfee")) || 0,
         platinumprice:
           levelType === "level2" && formData.get("platinumprice")
@@ -584,7 +594,7 @@ export default function Events() {
 
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Participants *
+                      Total Capacity / Participants *
                     </label>
                     <input
                       name="participants"
@@ -594,6 +604,24 @@ export default function Events() {
                       min="0"
                       className="w-full px-4 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-saffron-500/50"
                       placeholder="e.g. 1500"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Available Seats
+                    </label>
+                    <input
+                      name="availableseats"
+                      defaultValue={
+                        editingEvent?.availableseats !== undefined && editingEvent?.availableseats !== null
+                          ? editingEvent.availableseats
+                          : editingEvent?.participants || ""
+                      }
+                      type="number"
+                      min="0"
+                      className="w-full px-4 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-saffron-500/50"
+                      placeholder="Leave empty to match participants"
                     />
                   </div>
                 </>
@@ -1102,6 +1130,7 @@ export default function Events() {
                     <th className="px-6 py-4 font-medium">S.No</th>
                     <th className="px-6 py-4 font-medium">Actions</th>
                     <th className="px-6 py-4 font-medium">Participants</th>
+                    <th className="px-6 py-4 font-medium">Available Seats</th>
                     <th className="px-6 py-4 font-medium min-w-[300px]">
                       Event Details
                     </th>
@@ -1117,7 +1146,7 @@ export default function Events() {
                   {filteredLevel1Events.length === 0 && !loadingLevel1 ? (
                     <tr>
                       <td
-                        colSpan={9}
+                        colSpan={11}
                         className="px-6 py-8 text-center text-gray-500"
                       >
                         No events found.
@@ -1202,6 +1231,16 @@ export default function Events() {
                                 )}
                               </button>
                             )}
+                          </div>
+                        </td>
+                        <td className="px-6 py-4">
+                          <div className="flex items-center gap-1.5 font-bold text-emerald-600 text-sm">
+                            <Users className="w-4 h-4 text-emerald-500 shrink-0" />
+                            <span>
+                              {event.availableseats !== undefined && event.availableseats !== null
+                                ? event.availableseats
+                                : event.participants || 0}
+                            </span>
                           </div>
                         </td>
                         <td className="px-6 py-4">
@@ -1339,9 +1378,20 @@ export default function Events() {
                           </div>
                         </td>
                         <td className="px-6 py-4">
-                          <div className="flex items-center gap-2 text-sm text-gray-600">
-                            <Users className="w-4 h-4 text-gray-400" />
-                            {event.participants || 1}
+                          <div className="flex flex-col gap-1 text-sm text-gray-600">
+                            <div className="flex items-center gap-1.5 font-medium text-gray-800" title="Total Capacity">
+                              <Users className="w-4 h-4 text-saffron-500" />
+                              <span>{event.participants || 0}</span>
+                              <span className="text-[10px] text-gray-400 font-normal">total</span>
+                            </div>
+                            <div className="text-xs flex items-center gap-1">
+                              <span className="text-gray-400">Seats Left:</span>
+                              <span className="font-semibold text-emerald-600">
+                                {event.availableseats !== undefined && event.availableseats !== null
+                                  ? event.availableseats
+                                  : event.participants || 0}
+                              </span>
+                            </div>
                           </div>
                         </td>
                         <td className="px-6 py-4">
@@ -1439,6 +1489,7 @@ export default function Events() {
                     <th className="px-6 py-4 font-medium">S.No</th>
                     <th className="px-6 py-4 font-medium">Actions</th>
                     <th className="px-6 py-4 font-medium">Participants</th>
+                    <th className="px-6 py-4 font-medium">Available Seats</th>
                     <th className="px-6 py-4 font-medium min-w-[300px]">
                       Event Details
                     </th>
@@ -1454,7 +1505,7 @@ export default function Events() {
                   {filteredLevel2Events.length === 0 && !loadingLevel2 ? (
                     <tr>
                       <td
-                        colSpan={9}
+                        colSpan={11}
                         className="px-6 py-8 text-center text-gray-500"
                       >
                         No events found.
@@ -1539,6 +1590,16 @@ export default function Events() {
                                 )}
                               </button>
                             )}
+                          </div>
+                        </td>
+                        <td className="px-6 py-4">
+                          <div className="flex items-center gap-1.5 font-bold text-emerald-600 text-sm">
+                            <Users className="w-4 h-4 text-emerald-500 shrink-0" />
+                            <span>
+                              {event.availableseats !== undefined && event.availableseats !== null
+                                ? event.availableseats
+                                : event.participants || 0}
+                            </span>
                           </div>
                         </td>
                         <td className="px-6 py-4">
@@ -1676,9 +1737,20 @@ export default function Events() {
                           </div>
                         </td>
                         <td className="px-6 py-4">
-                          <div className="flex items-center gap-2 text-sm text-gray-600">
-                            <Users className="w-4 h-4 text-gray-400" />
-                            {event.participants || 1}
+                          <div className="flex flex-col gap-1 text-sm text-gray-600">
+                            <div className="flex items-center gap-1.5 font-medium text-gray-800" title="Total Capacity">
+                              <Users className="w-4 h-4 text-saffron-500" />
+                              <span>{event.participants || 0}</span>
+                              <span className="text-[10px] text-gray-400 font-normal">total</span>
+                            </div>
+                            <div className="text-xs flex items-center gap-1">
+                              <span className="text-gray-400">Seats Left:</span>
+                              <span className="font-semibold text-emerald-600">
+                                {event.availableseats !== undefined && event.availableseats !== null
+                                  ? event.availableseats
+                                  : event.participants || 0}
+                              </span>
+                            </div>
                           </div>
                         </td>
                         <td className="px-6 py-4">
