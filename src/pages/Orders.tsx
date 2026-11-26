@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import {
   Search,
   Eye,
+  Trash2,
   IndianRupee,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
@@ -40,10 +41,31 @@ export default function Orders() {
   const [endDate, setEndDate] = useState<string>("");
   const [orderStatus, setOrderStatus] = useState<string>("");
   const [paymentStatus, setPaymentStatus] = useState<string>("");
+  const [deletingId, setDeletingId] = useState<number | null>(null);
 
   useEffect(() => {
     fetchOrders();
   }, []);
+
+  const handleDeleteOrder = async (id: number) => {
+    if (!window.confirm("Are you sure you want to delete this order? This action cannot be undone.")) {
+      return;
+    }
+    setDeletingId(id);
+    try {
+      const response = await api.post("/admin/order/delete", { id });
+      if (response.data?.success || response.status === 200 || response.status === 201) {
+        setOrders((prev) => prev.filter((order) => order.id !== id));
+      } else {
+        alert(response.data?.message || "Failed to delete order");
+      }
+    } catch (error: any) {
+      console.error("Failed to delete order:", error);
+      alert(error.response?.data?.message || "Failed to delete order");
+    } finally {
+      setDeletingId(null);
+    }
+  };
 
   const fetchOrders = async () => {
     setLoading(true);
@@ -210,13 +232,27 @@ export default function Orders() {
                       </span>
                     </td>
                     <td className="px-6 py-4 text-right">
-                      <button
-                        onClick={() => navigate(`/orders/${order.id}`)}
-                        className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg cursor-pointer transition-colors"
-                        title="View Details"
-                      >
-                        <Eye className="w-4 h-4" />
-                      </button>
+                      <div className="flex items-center justify-end gap-1">
+                        <button
+                          onClick={() => navigate(`/orders/${order.id}`)}
+                          className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg cursor-pointer transition-colors"
+                          title="View Details"
+                        >
+                          <Eye className="w-4 h-4" />
+                        </button>
+                        <button
+                          onClick={() => handleDeleteOrder(order.id)}
+                          disabled={deletingId === order.id}
+                          className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg cursor-pointer transition-colors disabled:opacity-50"
+                          title="Delete Order"
+                        >
+                          {deletingId === order.id ? (
+                            <span className="w-4 h-4 border-2 border-red-500 border-t-transparent rounded-full animate-spin inline-block"></span>
+                          ) : (
+                            <Trash2 className="w-4 h-4" />
+                          )}
+                        </button>
+                      </div>
                     </td>
                     <td className="px-6 py-4">
                       <div className="flex flex-col gap-2">

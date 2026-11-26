@@ -48,6 +48,7 @@ interface Booking {
   eventtodate?: string;
   programtype?: string;
   leveltype?: string;
+  isofferprice?: boolean;
   pricetype?: "platinum" | "gold" | "silver" | string | null;
   platinumprice?: number | string | null;
   goldprice?: number | string | null;
@@ -686,7 +687,7 @@ export default function Bookings() {
                           {booking.leveltype === "level2" ? "Level 2" : "Level 1"}
                         </span>
                       )}
-                      {booking.leveltype === "level2" && booking.pricetype && (
+                      {booking.isofferprice && booking.pricetype && (
                         <span
                           className={`inline-block px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${
                             booking.pricetype?.toLowerCase() === "platinum"
@@ -1118,10 +1119,10 @@ export default function Bookings() {
                     <option value="refunded">Refunded</option>
                   </select>
                 </div>
-                {editingBooking.leveltype === "level2" && (
+                {editingBooking.isofferprice && (
                   <div>
                     <label className="block text-xs font-medium text-gray-600 mb-1">
-                      Package / Price Type (Level 2)
+                      Package / Price Type
                     </label>
                     <select
                       value={editForm.pricetype}
@@ -1512,17 +1513,19 @@ export default function Bookings() {
                         </span>
                       </div>
 
-                      {/* Level 2 Specific Details */}
-                      {selectedBooking.leveltype === "level2" ? (
+                      {/* Booking Pricing & Tier Details */}
+                      {selectedBooking.isofferprice ? (
                         <div className="pt-2 border-t border-gray-200 space-y-2.5">
                           <p className="flex justify-between items-center text-sm">
                             <span className="font-medium text-gray-600">Event From:</span>
                             <span className="font-semibold text-gray-800">{selectedBooking.eventdate || "-"}</span>
                           </p>
-                          <p className="flex justify-between items-center text-sm">
-                            <span className="font-medium text-gray-600">Event To:</span>
-                            <span className="font-semibold text-gray-800">{selectedBooking.eventtodate || "-"}</span>
-                          </p>
+                          {selectedBooking.eventtodate && (
+                            <p className="flex justify-between items-center text-sm">
+                              <span className="font-medium text-gray-600">Event To:</span>
+                              <span className="font-semibold text-gray-800">{selectedBooking.eventtodate}</span>
+                            </p>
+                          )}
 
                           {/* Selected Package Tier Box */}
                           <div className="bg-white p-3.5 rounded-xl border border-gray-200 space-y-2.5 shadow-sm">
@@ -1561,7 +1564,7 @@ export default function Bookings() {
                             {(selectedBooking.platinumprice || selectedBooking.goldprice || selectedBooking.silverprice) && (
                               <div className="pt-2 border-t border-gray-100">
                                 <p className="text-[11px] font-semibold text-gray-500 uppercase tracking-wide mb-1.5">
-                                  Level 2 Tier Rates
+                                  Tier Rates
                                 </p>
                                 <div className="grid grid-cols-3 gap-1.5 text-center text-xs">
                                   {selectedBooking.platinumprice && (
@@ -1594,12 +1597,18 @@ export default function Bookings() {
                           </div>
                         </div>
                       ) : (
-                        /* Level 1 Specific Details */
+                        /* Standard Registration Specific Details (When isofferprice is false) */
                         <div className="pt-2 border-t border-gray-200 space-y-2">
                           <p className="flex justify-between items-center text-sm">
                             <span className="font-medium text-gray-600">Event Date:</span>
                             <span className="font-semibold text-gray-800">{selectedBooking.eventdate || "-"}</span>
                           </p>
+                          {selectedBooking.eventtodate && (
+                            <p className="flex justify-between items-center text-sm">
+                              <span className="font-medium text-gray-600">Event To:</span>
+                              <span className="font-semibold text-gray-800">{selectedBooking.eventtodate}</span>
+                            </p>
+                          )}
                           <p className="flex justify-between items-center text-sm">
                             <span className="font-medium text-gray-600">Registration Fee (per person):</span>
                             <span className="font-bold text-gray-900">₹{selectedBooking.registrationfee || 0}</span>

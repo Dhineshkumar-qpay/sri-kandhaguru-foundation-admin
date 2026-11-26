@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Plus, Search, X, Trash2, Calendar } from "lucide-react";
+import { Plus, Search, X, Trash2, Calendar, Edit2 } from "lucide-react";
 import { motion } from "framer-motion";
 import api from "../services/api";
 
@@ -25,6 +25,7 @@ export default function Categories() {
   const [showForm, setShowForm] = useState(false);
   const [loading, setLoading] = useState(false);
   const [categoryName, setCategoryName] = useState("");
+  const [editingCategory, setEditingCategory] = useState<Category | null>(null);
 
   // Pagination State
   const [currentPage, setCurrentPage] = useState(1);
@@ -52,28 +53,53 @@ export default function Categories() {
     }
   };
 
-  const handleCreateCategory = async (e: React.FormEvent<HTMLFormElement>) => {
+  const handleSaveCategory = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!categoryName.trim()) return;
 
     setLoading(true);
     try {
-      const response = await api.post("/category/add", {
-        categoryname: categoryName.trim(),
-      });
-      if (response.data?.success) {
-        setShowForm(false);
-        setCategoryName("");
-        fetchCategories();
+      if (editingCategory) {
+        const response = await api.post("/category/update", {
+          categoryid: editingCategory.categoryid,
+          categoryname: categoryName.trim(),
+        });
+        if (response.data?.success) {
+          handleCloseForm();
+          fetchCategories();
+        } else {
+          alert(response.data?.message || "Failed to update category.");
+        }
       } else {
-        alert("Failed to add category.");
+        const response = await api.post("/category/add", {
+          categoryname: categoryName.trim(),
+        });
+        if (response.data?.success) {
+          handleCloseForm();
+          fetchCategories();
+        } else {
+          alert(response.data?.message || "Failed to add category.");
+        }
       }
-    } catch (error) {
-      console.error("Error creating category", error);
-      alert("An error occurred while adding.");
+    } catch (error: any) {
+      console.error("Error saving category", error);
+      alert(error.response?.data?.message || "An error occurred while saving.");
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleEditCategory = (category: Category) => {
+    setEditingCategory(category);
+    setCategoryName(category.categoryname);
+    setShowForm(true);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
+  const handleCloseForm = () => {
+    setShowForm(false);
+    setEditingCategory(null);
+    setCategoryName("");
   };
 
   const deleteCategory = async (id: number) => {
@@ -82,6 +108,9 @@ export default function Categories() {
       try {
         const response = await api.post("/category/delete", { categoryid: id });
         if (response.data?.success) {
+          if (editingCategory?.categoryid === id) {
+            handleCloseForm();
+          }
           fetchCategories();
         } else {
           alert("Failed to delete category.");
@@ -135,7 +164,11 @@ export default function Categories() {
           </p>
         </div>
         <button
-          onClick={() => setShowForm(true)}
+          onClick={() => {
+            setEditingCategory(null);
+            setCategoryName("");
+            setShowForm(true);
+          }}
           className="bg-saffron-500 hover:bg-saffron-600 text-white px-6 py-2.5 rounded-xl font-medium flex items-center gap-2 shadow-lg shadow-saffron-500/30 transition-all active:scale-95 cursor-pointer"
         >
           <Plus className="w-5 h-5" />
@@ -151,16 +184,16 @@ export default function Categories() {
         >
           <div className="flex justify-between items-center mb-6">
             <h2 className="text-xl font-bold text-gray-800">
-              Add New Category
+              {editingCategory ? "Edit Category" : "Add New Category"}
             </h2>
             <button
-              onClick={() => setShowForm(false)}
-              className="text-gray-400 hover:text-gray-600"
+              onClick={handleCloseForm}
+              className="text-gray-400 hover:text-gray-600 cursor-pointer"
             >
               <X className="w-6 h-6" />
             </button>
           </div>
-          <form className="space-y-4" onSubmit={handleCreateCategory}>
+          <form className="space-y-4" onSubmit={handleSaveCategory}>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 Category Name *
@@ -178,7 +211,7 @@ export default function Categories() {
             <div className="flex justify-end gap-3 pt-4 border-t border-gray-100 mt-6">
               <button
                 type="button"
-                onClick={() => setShowForm(false)}
+                onClick={handleCloseForm}
                 className="px-6 py-2 border border-gray-200 text-gray-600 rounded-xl hover:bg-gray-50 font-medium cursor-pointer"
               >
                 Cancel
@@ -186,11 +219,14 @@ export default function Categories() {
               <button
                 type="submit"
                 disabled={loading}
-                className={`px-6 py-2 bg-saffron-500 text-white rounded-xl hover:bg-saffron-600 font-medium shadow-md shadow-saffron-500/20 cursor-pointer ${
-                  loading ? "opacity-70 cursor-not-allowed" : ""
-                }`}
+                className={`px-6 py-2 bg-saffron-500 text-white rounded-xl hover:bg-saffron-600 font-medium shadow-md shadow-saffron-500/20 cursor-pointer ${loading ? "opacity-70 cursor-not-allowed" : ""
+                  }`}
               >
-                {loading ? "Saving..." : "Save Category"}
+                {loading
+                  ? "Saving..."
+                  : editingCategory
+                    ? "Update Category"
+                    : "Save Category"}
               </button>
             </div>
           </form>
@@ -223,10 +259,10 @@ export default function Categories() {
               <thead>
                 <tr className="bg-gray-50/50 border-b border-gray-100 text-gray-500 text-sm">
                   <th className="px-6 py-4 font-medium">S.No</th>
-                   <th className="px-6 py-4 font-medium ">Actions</th>
+                  <th className="px-6 py-4 font-medium ">Actions</th>
                   <th className="px-6 py-4 font-medium">Category Name</th>
                   <th className="px-6 py-4 font-medium">Date</th>
-                 
+
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
@@ -250,14 +286,23 @@ export default function Categories() {
                           {(currentPage - 1) * pageSize + index + 1}
                         </h1>
                       </td>
-                       <td className="px-6 py-4 ">
-                        <button
-                          onClick={() => deleteCategory(category.categoryid)}
-                          className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors cursor-pointer"
-                          title="Delete"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
+                      <td className="px-6 py-4">
+                        <div className="flex items-center gap-1">
+                          <button
+                            onClick={() => handleEditCategory(category)}
+                            className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors cursor-pointer"
+                            title="Edit"
+                          >
+                            <Edit2 className="w-4 h-4" />
+                          </button>
+                          <button
+                            onClick={() => deleteCategory(category.categoryid)}
+                            className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors cursor-pointer"
+                            title="Delete"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
                       </td>
                       <td className="px-6 py-4">
                         <p className="font-semibold text-gray-800 text-md">
@@ -268,17 +313,17 @@ export default function Categories() {
                         <div className="flex items-center gap-2 text-sm text-gray-600">
                           <Calendar className="w-4 h-4 text-saffron-500 shrink-0" />
                           <span className="whitespace-nowrap">
-                            {category.createdAt 
+                            {category.createdAt
                               ? new Date(category.createdAt).toLocaleDateString("en-US", {
-                                  month: "short",
-                                  day: "numeric",
-                                  year: "numeric",
-                                })
+                                month: "short",
+                                day: "numeric",
+                                year: "numeric",
+                              })
                               : "N/A"}
                           </span>
                         </div>
                       </td>
-                     
+
                     </tr>
                   ))
                 )}
@@ -308,11 +353,10 @@ export default function Categories() {
                     <button
                       key={pageNum}
                       onClick={() => setCurrentPage(pageNum)}
-                      className={`px-3 py-1 rounded-md transition-colors cursor-pointer ${
-                        pageNum === meta.currentPage
+                      className={`px-3 py-1 rounded-md transition-colors cursor-pointer ${pageNum === meta.currentPage
                           ? "bg-saffron-500 text-white shadow-sm"
                           : "border border-gray-200 hover:bg-gray-100"
-                      }`}
+                        }`}
                     >
                       {pageNum}
                     </button>

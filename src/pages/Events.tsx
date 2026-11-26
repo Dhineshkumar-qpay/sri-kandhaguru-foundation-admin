@@ -29,6 +29,7 @@ interface Event {
   participants: number;
   occupiedseats?: number;
   registrationfee?: number;
+  isofferprice?: boolean;
   venuename?: string;
   city: string;
   state: string;
@@ -83,6 +84,7 @@ export default function Events() {
   const [editingEvent, setEditingEvent] = useState<Event | null>(null);
   const [deliveryMode, setDeliveryMode] = useState("offline");
   const [levelType, setLevelType] = useState("level1");
+  const [isOfferPrice, setIsOfferPrice] = useState(false);
   const [schedules, setSchedules] = useState([
     { starttime: "", endtime: "", title: "" },
   ]);
@@ -318,21 +320,22 @@ export default function Events() {
           editingEvent?.occupiedseats !== undefined
             ? Number(editingEvent.occupiedseats)
             : 0,
+        isofferprice: isOfferPrice,
         registrationfee: Number(formData.get("registrationfee")) || 0,
         platinumprice:
-          levelType === "level2" && formData.get("platinumprice")
+          isOfferPrice && formData.get("platinumprice")
             ? Number(formData.get("platinumprice"))
             : null,
         goldprice:
-          levelType === "level2" && formData.get("goldprice")
+          isOfferPrice && formData.get("goldprice")
             ? Number(formData.get("goldprice"))
             : null,
         silverprice:
-          levelType === "level2" && formData.get("silverprice")
+          isOfferPrice && formData.get("silverprice")
             ? Number(formData.get("silverprice"))
             : null,
         lastofferdate:
-          levelType === "level2" && formData.get("lastofferdate")
+          isOfferPrice && formData.get("lastofferdate")
             ? String(formData.get("lastofferdate"))
             : null,
         venuename: formData.get("venuename") || "",
@@ -398,6 +401,7 @@ export default function Events() {
             setEditingEvent(null);
             setDeliveryMode("offline");
             setLevelType("level1");
+            setIsOfferPrice(false);
             setSchedules([{ starttime: "", endtime: "", title: "" }]);
             setBenefits([""]);
             setThingsToBring([""]);
@@ -426,6 +430,7 @@ export default function Events() {
                 setEditingEvent(null);
                 setDeliveryMode("offline");
                 setLevelType("level1");
+                setIsOfferPrice(false);
                 setSchedules([{ starttime: "", endtime: "", title: "" }]);
                 setBenefits([""]);
                 setThingsToBring([""]);
@@ -619,41 +624,61 @@ export default function Events() {
                   </div>
                 </>
               )}
-              <div>
+              <div className="xl:col-span-3">
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Registration Fee *
+                  Offer Price (Pricing & Offers) *
                 </label>
-                <input
-                  name="registrationfee"
-                  defaultValue={editingEvent?.registrationfee || ""}
-                  required
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  className="w-full px-4 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-saffron-500/50"
-                  placeholder="e.g. 100"
-                />
+                <select
+                  name="isofferprice"
+                  value={isOfferPrice ? "true" : "false"}
+                  onChange={(e) => setIsOfferPrice(e.target.value === "true")}
+                  className="w-full px-4 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-saffron-500/50 bg-white"
+                >
+                  <option value="false">No (Only Registration Fee)</option>
+                  <option value="true">Yes (Tier Pricing & Offers: Platinum, Gold, Silver)</option>
+                </select>
               </div>
 
-              {levelType === "level2" && (
+              {!isOfferPrice ? (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Registration Fee *
+                  </label>
+                  <input
+                    name="registrationfee"
+                    defaultValue={
+                      editingEvent?.silverprice && Number(editingEvent?.registrationfee) === Number(editingEvent?.silverprice)
+                        ? ""
+                        : editingEvent?.registrationfee || ""
+                    }
+                    required={!isOfferPrice}
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    className="w-full px-4 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-saffron-500/50"
+                    placeholder="e.g. 100"
+                  />
+                </div>
+              ) : (
                 <>
                   <div className="xl:col-span-3 border-t border-purple-100 pt-4 mt-2">
                     <h4 className="text-sm font-bold text-purple-900 uppercase tracking-wider mb-1 flex items-center gap-2">
                       <span className="w-2.5 h-2.5 rounded-full bg-purple-600"></span>
-                      Level 2 Tier Pricing & Offer Details
+                      Tier Pricing & Offer Details
                     </h4>
                     <p className="text-xs text-purple-600">
-                      Configure Platinum, Gold, Silver tier pricing and offer validity for Level 2 programs.
+                      Configure Platinum, Gold, Silver tier pricing and offer validity.
                     </p>
                   </div>
 
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Platinum Price (₹)
+                      Platinum Price (₹) *
                     </label>
                     <input
                       name="platinumprice"
                       defaultValue={editingEvent?.platinumprice || ""}
+                      required={isOfferPrice}
                       type="number"
                       step="0.01"
                       min="0"
@@ -664,11 +689,12 @@ export default function Events() {
 
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Gold Price (₹)
+                      Gold Price (₹) *
                     </label>
                     <input
                       name="goldprice"
                       defaultValue={editingEvent?.goldprice || ""}
+                      required={isOfferPrice}
                       type="number"
                       step="0.01"
                       min="0"
@@ -679,11 +705,12 @@ export default function Events() {
 
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Silver Price (₹)
+                      Silver Price (₹) *
                     </label>
                     <input
                       name="silverprice"
                       defaultValue={editingEvent?.silverprice || ""}
+                      required={isOfferPrice}
                       type="number"
                       step="0.01"
                       min="0"
@@ -1122,7 +1149,7 @@ export default function Events() {
                   <tr className="bg-gray-50/50 border-b border-gray-100 text-gray-500 text-sm">
                     <th className="px-6 py-4 font-medium">S.No</th>
                     <th className="px-6 py-4 font-medium">Actions</th>
-                    <th className="px-6 py-4 font-medium">Participants</th>
+                    <th className="px-6 py-4 font-medium w-28">Participants</th>
                     <th className="px-6 py-4 font-medium">Occupied Seats</th>
                     <th className="px-6 py-4 font-medium min-w-[300px]">
                       Event Details
@@ -1170,6 +1197,7 @@ export default function Events() {
                                 setEditingEvent(event);
                                 setDeliveryMode(event.deliverymode || "offline");
                                 setLevelType(event.leveltype || "level1");
+                                setIsOfferPrice(Boolean(event.isofferprice));
                                 setShowForm(true);
                                 setSchedules(
                                   event.agenda?.length
@@ -1199,12 +1227,12 @@ export default function Events() {
                             </button>
                           </div>
                         </td>
-                        <td className="px-6 py-4">
-                          <div className="flex flex-col gap-2">
+                        <td className="px-6 py-4 w-28">
+                          <div className="flex flex-col gap-1.5 w-20">
                             <input
                               type="number"
                               min="0"
-                              className="text-xs border border-gray-200 rounded-lg px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-saffron-500 bg-white min-w-[80px]"
+                              className="w-20 text-xs border border-gray-200 rounded-lg px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-saffron-500 bg-white"
                               value={pendingParticipants[event.id] !== undefined ? pendingParticipants[event.id] : (event.participants || 0)}
                               onChange={(e) => setPendingParticipants({ ...pendingParticipants, [event.id]: e.target.value })}
                             />
@@ -1477,7 +1505,7 @@ export default function Events() {
                   <tr className="bg-gray-50/50 border-b border-gray-100 text-gray-500 text-sm">
                     <th className="px-6 py-4 font-medium">S.No</th>
                     <th className="px-6 py-4 font-medium">Actions</th>
-                    <th className="px-6 py-4 font-medium">Participants</th>
+                    <th className="px-6 py-4 font-medium w-28">Participants</th>
                     <th className="px-6 py-4 font-medium">Occupied Seats</th>
                     <th className="px-6 py-4 font-medium min-w-[300px]">
                       Event Details
@@ -1525,6 +1553,7 @@ export default function Events() {
                                 setEditingEvent(event);
                                 setDeliveryMode(event.deliverymode || "offline");
                                 setLevelType(event.leveltype || "level1");
+                                setIsOfferPrice(Boolean(event.isofferprice));
                                 setShowForm(true);
                                 setSchedules(
                                   event.agenda?.length
@@ -1554,12 +1583,12 @@ export default function Events() {
                             </button>
                           </div>
                         </td>
-                        <td className="px-6 py-4">
-                          <div className="flex flex-col gap-2">
+                        <td className="px-6 py-4 w-28">
+                          <div className="flex flex-col gap-1.5 w-20">
                             <input
                               type="number"
                               min="0"
-                              className="text-xs border border-gray-200 rounded-lg px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-saffron-500 bg-white min-w-[80px]"
+                              className="w-20 text-xs border border-gray-200 rounded-lg px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-saffron-500 bg-white"
                               value={pendingParticipants[event.id] !== undefined ? pendingParticipants[event.id] : (event.participants || 0)}
                               onChange={(e) => setPendingParticipants({ ...pendingParticipants, [event.id]: e.target.value })}
                             />
